@@ -1,0 +1,20 @@
+{
+   "name": "uwe-sense",
+   "version": "0.0.1",
+   "description": "BLE Sensor Server for UWESense",
+   "author": "Bendict R. Gaster",
+   "license": "MIT",
+   "scripts": {
+    "start": "node ./src/app.js",
+    "prepublish": "tsc",
+    "build": "tsc"
+   },
+   "main": "./src/app.js",
+   "keywords": [
+    "Sensor",
+    "Bluetooth",
+    "BLE"
+   ],
+   "dependencies": {
+   }
+}

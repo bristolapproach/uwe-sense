@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "debug": "registry:npm/debug#2.0.0+20170504163145",
+    "noble": "registry:dt/noble#0.0.0+20161119044246",
+    "ws": "registry:dt/ws#0.0.0+20170307231658"
+  }
+}
