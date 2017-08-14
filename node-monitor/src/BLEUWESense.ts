@@ -15,7 +15,7 @@ import events = require("events") // Node emitter library
 const CONTROL_RATE_VALUE_FORMAT: number = 1
 
 // Servive UUID for physical remote
-const CONTROLLER_SERVICE_UUID: string = 'A943A80B083F44D3AED71CB57B082F33'
+const CONTROLLER_SERVICE_UUID: string = 'A80B'//'A943A80B083F44D3AED71CB57B082F33'
 // characteristic UUID for physical remote
 const CONTROLLER_CHARACTERISTIC_UUID: string = 'B4FBC6CE380F4EC1BE0AD163EFCF02C4'
 
@@ -60,13 +60,15 @@ export default class UWESense extends events.EventEmitter {
     this.receivedEvent_ = receivedEvent
 
     noble.on('stateChange', function(state) {
-      if (state == 'poweredOn')
+      if (state == 'poweredOn') {
+        console.log("looking out")
         noble.startScanning([], false)
+      }
       else
         noble.stopScanning()
     })
 
-    //noble.on('discover', this.handlePeripheral)
+    noble.on('discover', this.handlePeripheral)
   }
 
   /**
@@ -86,18 +88,27 @@ export default class UWESense extends events.EventEmitter {
      */
     private handlePeripheral = (peripheral : noble.Peripheral) => {
       console.log("found peripheral with UUID: " + peripheral.uuid)
+      if (peripheral.advertisement) {
+          console.log("Name: " + peripheral.advertisement.localName)
+
+          console.log("Service UUID: " + peripheral.advertisement.serviceUuids[2])
+      }
 
       this.peripheral_ = peripheral
 
       peripheral.connect((error: string) => {
-        //console.log("connected")
+        noble.stopScanning()
+        console.log("connected")
 
       // now see if it actually supports teh services we are interested in,
       // i.e. Reveal.js remote.
       this.peripheral_.discoverServices(
         [CONTROLLER_SERVICE_UUID],
         (error: string, services: noble.Service[]) => {
-              //console.log("connected to controller service")
+              console.log("connected to controller service " + services.length)
+              // for (var service in services) {
+              //     console.log(service.uuid); // 0,1,2
+              // }
               this.handleControllerService(services[0])
         })
       })
@@ -114,15 +125,26 @@ export default class UWESense extends events.EventEmitter {
      * @param service represetents the remote service matched with BLE peripheral
      */
     private handleControllerService = (service: noble.Service) => {
-      //console.log("found service: " + service.uuid)
+      console.log("found service: " + service.uuid)
       service.discoverCharacteristics(
           [CONTROLLER_CHARACTERISTIC_UUID],
           (error: String, characteristics: noble.Characteristic[]) => {
             //console.log("dicovered controller characteristic")
-            console.log("BLE remote connected")
+            //console.log("BLE remote connected")
 
             // make sure we keep the characteristic around for on going use
             this.controllerChar_ = characteristics[0]
+
+            console.log("BLE remote connected" + characteristics.length)
+
+            this.controllerChar_.on('data', function(data, isNotification) {
+                   console.log('battery level is now: ', data.readUInt8(0) + '%');
+            });
+
+            // to enable notify
+            this.controllerChar_.subscribe(function(error) {
+                console.log('battery level notification on');
+            });
 
             // setup handler for read notifications, i.e. process button presses
             // from device and emit them as messages for any listeners
@@ -138,7 +160,7 @@ export default class UWESense extends events.EventEmitter {
                     // do nothing
                     break
                 }
-                //console.log("received = " + controlVal)
+                console.log("received = " + controlVal)
             })
 
             this.controllerChar_.notify(true)

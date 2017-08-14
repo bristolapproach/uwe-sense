@@ -1,0 +1,6 @@
+*.o
+*.hex
+*.out
+*.gch
+node_modules
+typings
