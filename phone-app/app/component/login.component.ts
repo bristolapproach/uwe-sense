@@ -14,61 +14,78 @@ export class LoginComponent implements OnInit {
     private loginStatus: string = "";
     private loggingIn: boolean = false;
     private fireBaseInitComplete: boolean = false;
+    private account: firebase.User;
 
     constructor(private routerExtensions: RouterExtensions,
                 private api: ApiService) {
     }
 
-    goAbout(): void {
+    public ngOnInit(): void {
+    }
+
+    public goAbout(): void {
         const params = {page: "/login"};
         this.routerExtensions.navigate(['/about', params], {clearHistory: true});
     }
 
-    ngOnInit(): void {
-    }
-
     public login() {
+        // Do nothing if user is already logging in.
         if (this.loggingIn) {
             alert("Already logging in");
             return;
         }
 
-        this.loggingIn = true;
+        // Update the login status.
         this.loginStatus = "Initializing";
+        this.loggingIn = true;
 
-        this.initFirebase(() => {
+        // Initialize FireBase.
+        this.initFireBase().then(() => {
+
+            // Login via Google.
             this.loginStatus = "Logging in";
-            firebase.login({type: firebase.LoginType.GOOGLE}).then(account => {
-                this.loginStatus = "Fetching authentication token";
-                firebase.getAuthToken({forceRefresh: true}).then(token => {
-                    this.loginStatus = "Authenticating";
-                    this.api.authenticate(token, () => {
-                        this.loginStatus = "Complete";
-                        this.routerExtensions.navigate(['/session'], {clearHistory: true}).then(() => {
-                            this.loggingIn = false;
-                            alert("Successfully logged in as " + account.name);
-                        });
-                    }, error => {
-                        alert("Failed to login: " + error);
-                    });
-                });
-            }, error => {
-                alert("Failed to login: " + error);
-            });
+            this.fireBaseInitComplete = true;
+            return firebase.login({type: firebase.LoginType.GOOGLE});
+
+        }).then((account: firebase.User) => {
+
+            // Fetch the FireBase authentication token.
+            this.loginStatus = "Fetching authentication token";
+            this.account = account;
+            return firebase.getAuthToken({forceRefresh: true});
+
+        }).then((token: string) => {
+
+            // Authenticate with DataUnity using the token.
+            this.loginStatus = "Authenticating";
+            return this.api.authenticate(token);
+
+        }).then(() => {
+
+            // Navigate to the "session" page.
+            this.loginStatus = "Complete";
+            return this.routerExtensions.navigate(['/session'], {clearHistory: true});
+
+        }).then(() => {
+
+            // Alert the user their login was a success.
+            this.loggingIn = false;
+            alert("Successfully logged in as " + this.account.name);
+
+        }, error => {
+
+            // Tell the user if an error occurred.
+            this.loggingIn = false;
+            alert("Failed to login: " + error);
+
         });
     }
 
-    public initFirebase(callback: () => any) {
+    public initFireBase(): Promise<void> {
         if (this.fireBaseInitComplete) {
-            callback();
-            return;
+            return Promise.resolve();
         }
 
-        firebase.init({}).then(() => {
-            this.fireBaseInitComplete = true;
-            callback();
-        }, () => {
-            callback();
-        });
+        return firebase.init({});
     }
 }

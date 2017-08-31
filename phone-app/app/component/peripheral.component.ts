@@ -1,6 +1,5 @@
 import {Component, OnInit} from "@angular/core";
 import {TextDecoder} from "text-encoding";
-import {ApiService} from "../app.service";
 import {ActivatedRoute} from "@angular/router";
 import * as bluetooth from "nativescript-bluetooth";
 import * as dialogs from "ui/dialogs";
@@ -8,6 +7,7 @@ import * as fileSystem from "file-system";
 import {RouterExtensions} from "nativescript-angular";
 import {ListPicker} from "tns-core-modules/ui/list-picker";
 import {DEFAULT_RESAMPLE_RATE, NOTIFY_CHARACTERISTICS, SENSOR_SERVICE_ID} from "../configuration";
+import {findPeripheral, getCharacteristic, getUWESenseService} from "../util";
 
 @Component({
     selector: "ns-items",
@@ -29,8 +29,7 @@ export class PeripheralComponent implements OnInit {
     private zeroToTwentyFour = Array(24).fill(1, 25).map((x, i) => i);
 
     constructor(private routerExtensions: RouterExtensions,
-                private route: ActivatedRoute,
-                private api: ApiService) {
+                private route: ActivatedRoute) {
         this.peripheral = {
             UUID: route.snapshot.params["peripheralId"],
             name: route.snapshot.params["peripheralName"]
@@ -45,15 +44,15 @@ export class PeripheralComponent implements OnInit {
             }
 
             this.knownPeripherals = JSON.parse(content);
-            this.peripheral = PeripheralComponent.findPeripheral(this.knownPeripherals, this.peripheral.UUID);
-            this.service = PeripheralComponent.getUWESenseService(this.peripheral);
+            this.peripheral = findPeripheral(this.knownPeripherals, this.peripheral.UUID);
+            this.service = getUWESenseService(this.peripheral);
 
             if (this.service == null) {
                 return;
             }
 
             for (let id in NOTIFY_CHARACTERISTICS) {
-                const characteristic = PeripheralComponent.getCharacteristic(this.service, id);
+                const characteristic = getCharacteristic(this.service, id);
 
                 if (!NOTIFY_CHARACTERISTICS.hasOwnProperty(id) ||
                     characteristic == null) {
@@ -142,7 +141,7 @@ export class PeripheralComponent implements OnInit {
 
     public changeHours(args, id) {
         let picker = <ListPicker>args.object;
-        const characteristic = PeripheralComponent.getCharacteristic(this.service, id);
+        const characteristic = getCharacteristic(this.service, id);
 
         if (characteristic["resample"] == null) {
             characteristic["resample"] = {};
@@ -153,7 +152,7 @@ export class PeripheralComponent implements OnInit {
 
     public changeMinutes(args, id) {
         let picker = <ListPicker>args.object;
-        const characteristic = PeripheralComponent.getCharacteristic(this.service, id);
+        const characteristic = getCharacteristic(this.service, id);
 
         if (characteristic["resample"] == null) {
             characteristic["resample"] = {};
@@ -164,42 +163,12 @@ export class PeripheralComponent implements OnInit {
 
     public changeSeconds(args, id) {
         let picker = <ListPicker>args.object;
-        const characteristic = PeripheralComponent.getCharacteristic(this.service, id);
+        const characteristic = getCharacteristic(this.service, id);
 
         if (characteristic["resample"] == null) {
             characteristic["resample"] = {};
         }
 
         characteristic["resample"]["seconds"] = picker.selectedIndex;
-    }
-
-    static findPeripheral(peripherals: any[], uuid: string) {
-        for (let peripheral of peripherals) {
-            if (peripheral.UUID == uuid) {
-                return peripheral;
-            }
-        }
-        return null;
-    }
-
-    static getUWESenseService(peripheral) {
-        for (let i = 0; i < peripheral.services.length; i++) {
-            const service = peripheral.services[i];
-
-            if (service.UUID == SENSOR_SERVICE_ID) {
-                return service;
-            }
-        }
-        return null;
-    }
-
-    static getCharacteristic(service, characteristicId) {
-        for (let i = 0; i < service.characteristics.length; i++) {
-            const characteristic = service.characteristics[i];
-            if (characteristic.UUID == characteristicId) {
-                return characteristic;
-            }
-        }
-        return null;
     }
 }

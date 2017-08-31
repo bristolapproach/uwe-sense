@@ -23,7 +23,7 @@ export class ApiService {
         return this.locationEnabled;
     }
 
-    public setLocationEnabled(enabled: boolean) {
+    public setLocationEnabled(enabled: boolean): void {
         this.locationEnabled = enabled;
     }
 
@@ -35,28 +35,21 @@ export class ApiService {
         return this.session;
     }
 
-    authenticate(token: string, successCallback: (success: string) => any, errorCallback: (error: string) => any): void {
-        const headers = {};
-        this.token = token;
-
+    public authenticate(token: string): Promise<void> {
         console.log("Sending authentication token: " + token);
 
-        http.request({
+        this.token = token;
+
+        return http.request({
             method: "POST",
             url: this.authenticateUrl,
-            headers: headers,
             content: token
         }).then(response => {
-            console.log("Token: " + response.content.toString());
             this.authorisationJwt = response.content.toString();
-            successCallback(response);
-        }, error => {
-            console.log("Error occurred: " + error);
-            errorCallback(error);
         });
     }
 
-    createDevice(data: CreateDevice): void {
+    public createDevice(data: CreateDevice): Promise<string> {
         const headers = {
             "Authorization": "Bearer " + this.authorisationJwt,
             "Content-Type": "application/json"
@@ -64,108 +57,108 @@ export class ApiService {
 
         console.log("Sending create device: " + JSON.stringify(data));
 
-        http.request({
+        return http.request({
             method: "POST",
             url: this.createDeviceUrl,
             headers: headers,
             content: JSON.stringify(data)
         }).then(response => {
-            console.log("Device creation response: " + response.content.toString());
+            const message = "(" + response.statusCode + ")" + response.content.toString();
+            console.log("Device creation response: " + message);
 
             if (response.statusCode == 401) {
-                this.authenticate(this.token, () => {
-                    this.createDevice(data);
-                }, () => {
-                    alert("Authentication failure, data was lost");
+                return this.authenticate(this.token).then(() => {
+                    return this.createDevice(data);
                 });
             }
-        }, error => {
-            console.log("Device creation error: " + error);
+
+            if (response.statusCode < 400) {
+                return Promise.resolve(message);
+            }
+
+            return Promise.reject(message);
         });
     }
 
-    submitReading(data: SensorReading): void {
+    public submitReading(data: SensorReading): Promise<string> {
         const headers = {
             "Authorization": "Bearer " + this.authorisationJwt,
             "Content-Type": "application/json"
         };
 
-        this.addLocation(data, () => {
+        return this.addLocation(data).then(() => {
             console.log("Sending sensor reading: " + JSON.stringify(data));
-            http.request({
+            return http.request({
                 method: "POST",
                 url: this.dataPublishingUrl,
                 headers: headers,
                 content: JSON.stringify(data)
-            }).then(response => {
-                console.log("Reading submission response: " + response.content.toString());
-
-                if (response.statusCode == 401) {
-                    this.authenticate(this.token, () => {
-                        this.submitReading(data);
-                    }, () => {
-                        alert("Authentication failure, data was lost");
-                    });
-                }
-            }, error => {
-                console.log("Reading submission error: " + error);
             });
+        }).then(response => {
+            const message = "(" + response.statusCode + ")" + response.content.toString();
+            console.log("Reading submission response: " + message);
+
+            if (response.statusCode == 401) {
+                return this.authenticate(this.token).then(() => {
+                    return this.submitReading(data);
+                });
+            }
+
+            if (response.statusCode < 400) {
+                return Promise.resolve(message);
+            }
+
+            return Promise.reject(message);
         });
     }
 
-    submitNote(data: Note): void {
+    public submitNote(data: Note): Promise<string> {
         const headers = {
             "Authorization": "Bearer " + this.authorisationJwt,
             "Content-Type": "application/json"
         };
 
-        this.addLocation(data, () => {
+        return this.addLocation(data).then(() => {
             console.log("Sending note: " + JSON.stringify(data));
-            http.request({
+            return http.request({
                 method: "POST",
                 url: this.dataPublishingUrl,
                 headers: headers,
                 content: JSON.stringify(data)
-            }).then(response => {
-                console.log("Note submission response: " + response.content.toString());
-
-                if (response.statusCode == 401) {
-                    this.authenticate(this.token, () => {
-                        this.submitNote(data);
-                    }, () => {
-                        alert("Authentication failure, data was lost");
-                    });
-                }
-            }, error => {
-                console.log("Note submission error: " + error);
             });
+        }).then(response => {
+            const message = "(" + response.statusCode + ")" + response.content.toString();
+            console.log("Note submission response: " + response.content.toString());
+
+            if (response.statusCode == 401) {
+                return this.authenticate(this.token).then(() => {
+                    return this.submitNote(data);
+                });
+            }
+
+            if (response.statusCode < 400) {
+                return Promise.resolve(message);
+            }
+
+            return Promise.reject(message);
         });
     }
 
-    private addLocation(data: LocationData, callback: () => any) {
+    private addLocation(data: LocationData): Promise<void> {
         if (!this.locationEnabled) {
-            callback();
-            return;
+            return Promise.resolve();
         }
 
         if (!geolocation.isEnabled()) {
-            geolocation.enableLocationRequest(true).then(() => {
-                geolocation.getCurrentLocation({}).then(location => {
-                    data.location = location;
-                    callback();
-                }, () => {
-                    callback();
-                });
-            }, () => {
-                callback();
+            return geolocation.enableLocationRequest(true).then(() => {
+                return geolocation.getCurrentLocation({});
+            }).then(location => {
+                data.location = location;
             });
         }
 
         geolocation.getCurrentLocation({}).then(location => {
             data.location = location;
-            callback();
-        }, () => {
-            callback();
         });
     }
 }
