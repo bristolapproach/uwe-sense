@@ -39,7 +39,6 @@ export class ConnectComponent implements OnInit {
             }
 
             this.disconnectedKnownPeripherals = JSON.parse(content);
-            console.log("CONNECT PERI: " + JSON.stringify(this.disconnectedKnownPeripherals));
 
             for (let i = 0; i < this.disconnectedKnownPeripherals.length; i++) {
                 const peripheral = this.disconnectedKnownPeripherals[i];

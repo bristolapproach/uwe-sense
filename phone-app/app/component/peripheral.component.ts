@@ -45,7 +45,6 @@ export class PeripheralComponent implements OnInit {
             }
 
             this.knownPeripherals = JSON.parse(content);
-            console.log("KNOWN PER: " + JSON.stringify(this.knownPeripherals));
             this.peripheral = PeripheralComponent.findPeripheral(this.knownPeripherals, this.peripheral.UUID);
             this.service = PeripheralComponent.getUWESenseService(this.peripheral);
 
@@ -103,6 +102,10 @@ export class PeripheralComponent implements OnInit {
         });
 
         this.updating = false;
+    }
+
+    back(): void {
+        this.routerExtensions.back();
     }
 
     unregister(): void {

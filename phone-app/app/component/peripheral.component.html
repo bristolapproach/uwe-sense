@@ -21,6 +21,7 @@
                 text="{{ updating ? 'Updating \u27f2' : 'Update' }}"
                 (tap)="update($event)"
                 isEnabled="{{ !updating }}"></Button>
+        <Button text="Back" (tap)="back($event)"></Button>
         <Button class="special" text="Unregister" (tap)="unregister($event)"></Button>
     </StackLayout>
 </ScrollView>
