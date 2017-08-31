@@ -54,6 +54,11 @@ export class ConnectComponent implements OnInit {
     }
 
     quitSession(): void {
+        for (let i = 0; i < this.connectedPeripherals.length; i++) {
+            const peripheral = this.connectedPeripherals[i];
+            bluetooth.disconnect({UUID: peripheral.UUID});
+        }
+
         this.routerExtensions.navigate(['/session'], {clearHistory: true});
     }
 
