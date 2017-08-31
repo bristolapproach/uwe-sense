@@ -175,6 +175,8 @@ export class ConnectComponent implements OnInit {
             return;
         }
 
+        const writes = [];
+
         for (let i = 0; i < service.characteristics.length; i++) {
             const characteristic = service.characteristics[i];
 
@@ -189,12 +191,12 @@ export class ConnectComponent implements OnInit {
             const resample = characteristic.resample;
             const time = (resample.hours * 60 * 60) + (resample.minutes * 60) + resample.seconds;
 
-            bluetooth.write({
+            writes.push(bluetooth.write({
                 peripheralUUID: peripheral.UUID,
                 serviceUUID: SENSOR_SERVICE_ID,
                 characteristicUUID: characteristic.UUID,
                 value: '0x' + time.toString(16)
-            });
+            }));
         }
 
         this.zone.run(() => {
@@ -210,6 +212,16 @@ export class ConnectComponent implements OnInit {
             deviceId: peripheral.UUID,
             typeIds: typeIds
         });
+
+        Promise.all(writes).then(() => {
+            this.subscribe(peripheral);
+        }, () => {
+            this.subscribe(peripheral);
+        });
+    }
+
+    private subscribe(peripheral): void {
+        const service = ConnectComponent.getUWESenseService(peripheral);
 
         for (let i = 0; i < service.characteristics.length; i++) {
             const characteristicId: string = service.characteristics[i].UUID;
