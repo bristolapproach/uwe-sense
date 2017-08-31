@@ -12,6 +12,7 @@ export class ApiService {
     private dataPublishingUrl: string = this.baseUrl + "/citizen-sensing/device-data-publishing";
     private createDeviceUrl: string = this.baseUrl + "/citizen-sensing/register-device-with-hardware-id";
     private authorisationJwt: string = "";
+    private token: string = "";
     private locationEnabled: boolean = false;
     private session: Date;
 
@@ -36,6 +37,7 @@ export class ApiService {
 
     authenticate(token: string, successCallback: (success: string) => any, errorCallback: (error: string) => any): void {
         const headers = {};
+        this.token = token;
 
         console.log("Sending authentication token: " + token);
 
@@ -69,6 +71,14 @@ export class ApiService {
             content: JSON.stringify(data)
         }).then(response => {
             console.log("Device creation response: " + response.content.toString());
+
+            if (response.statusCode == 401) {
+                this.authenticate(this.token, () => {
+                    this.createDevice(data);
+                }, () => {
+                    alert("Authentication failure, data was lost");
+                });
+            }
         }, error => {
             console.log("Device creation error: " + error);
         });
@@ -89,6 +99,14 @@ export class ApiService {
                 content: JSON.stringify(data)
             }).then(response => {
                 console.log("Reading submission response: " + response.content.toString());
+
+                if (response.statusCode == 401) {
+                    this.authenticate(this.token, () => {
+                        this.submitReading(data);
+                    }, () => {
+                        alert("Authentication failure, data was lost");
+                    });
+                }
             }, error => {
                 console.log("Reading submission error: " + error);
             });
@@ -110,6 +128,14 @@ export class ApiService {
                 content: JSON.stringify(data)
             }).then(response => {
                 console.log("Note submission response: " + response.content.toString());
+
+                if (response.statusCode == 401) {
+                    this.authenticate(this.token, () => {
+                        this.submitNote(data);
+                    }, () => {
+                        alert("Authentication failure, data was lost");
+                    });
+                }
             }, error => {
                 console.log("Note submission error: " + error);
             });
