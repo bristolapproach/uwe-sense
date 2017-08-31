@@ -1,16 +1,26 @@
 import {Component, NgZone, OnInit} from "@angular/core";
-import * as bluetooth from "nativescript-bluetooth";
+import {
+    connect,
+    disconnect,
+    hasCoarseLocationPermission,
+    ReadResult,
+    requestCoarseLocationPermission,
+    startNotifying,
+    startScanning,
+    write
+} from "nativescript-bluetooth";
 import {TextDecoder} from "text-encoding";
-import {ApiService, SensorReading} from "../app.service";
 import {RouterExtensions} from "nativescript-angular";
+import {File, knownFolders} from "tns-core-modules/file-system";
+import {ApiService} from "../app.service";
 import {
     DEFAULT_RESAMPLE_RATE,
     NOTIFY_CHARACTERISTICS,
     SCAN_DURATION_SECONDS,
     SENSOR_SERVICE_ID
 } from "../configuration";
-import {File, knownFolders} from "tns-core-modules/file-system";
 import {addPeripheral, deletePeripheral, findPeripheral, getUWESenseService} from "../util";
+import {SensorReading, UWEPeripheral, UWEService} from "../interfaces";
 
 @Component({
     selector: "ns-items",
@@ -21,10 +31,10 @@ export class ConnectComponent implements OnInit {
 
     private scanning: boolean = false;
     private scanningText: string = "Scanning";
-    private disconnectedKnownPeripherals = [];
-    private disconnectedPeripherals = [];
-    private connectedPeripherals = [];
-    private connectingIds = new Set();
+    private disconnectedKnownPeripherals: UWEPeripheral[] = [];
+    private disconnectedPeripherals: UWEPeripheral[] = [];
+    private connectedPeripherals: UWEPeripheral[] = [];
+    private connectingIds: Set<string> = new Set();
     private knownPeripheralsFile: File;
     private devicesFound: number = 0;
 
@@ -57,7 +67,7 @@ export class ConnectComponent implements OnInit {
     public quitSession(): void {
         for (let i = 0; i < this.connectedPeripherals.length; i++) {
             const peripheral = this.connectedPeripherals[i];
-            bluetooth.disconnect({UUID: peripheral.UUID});
+            disconnect({UUID: peripheral.UUID});
         }
 
         this.routerExtensions.navigate(["/session"], {clearHistory: true});
@@ -67,10 +77,9 @@ export class ConnectComponent implements OnInit {
         this.routerExtensions.navigate(["/note"], {clearHistory: false});
     }
 
-    public configure(peripheral: bluetooth.Peripheral): void {
+    public configure(peripheral: UWEPeripheral): void {
         const params = {
-            peripheralId: peripheral.UUID,
-            peripheralName: peripheral.name
+            peripheralId: peripheral.UUID
         };
 
         this.routerExtensions.navigate(["/peripheral", params], {clearHistory: false});
@@ -82,11 +91,11 @@ export class ConnectComponent implements OnInit {
             return;
         }
 
-        bluetooth.hasCoarseLocationPermission().then(granted => {
+        hasCoarseLocationPermission().then((granted: boolean) => {
             if (granted) {
                 return Promise.resolve();
             } else {
-                return bluetooth.requestCoarseLocationPermission();
+                return requestCoarseLocationPermission();
             }
         }).then(() => {
             this.scanning = true;
@@ -100,10 +109,10 @@ export class ConnectComponent implements OnInit {
 
             this.devicesFound = 0;
 
-            return bluetooth.startScanning({
+            return startScanning({
                 serviceUUIDs: [SENSOR_SERVICE_ID],
                 seconds: SCAN_DURATION_SECONDS,
-                onDiscovered: this.onDiscovered
+                onDiscovered: (peripheral: UWEPeripheral) => this.onDiscovered(peripheral)
             });
         }).then(() => {
             this.scanning = false;
@@ -114,21 +123,17 @@ export class ConnectComponent implements OnInit {
         });
     }
 
-    public onDiscovered(peripheral) {
+    public onDiscovered(peripheral: UWEPeripheral): void {
         if (findPeripheral(this.disconnectedKnownPeripherals, peripheral.UUID)) {
             this.connect(peripheral, true);
             this.devicesFound++;
-            return;
-        }
-
-        if (!findPeripheral(this.disconnectedPeripherals, peripheral.UUID)) {
+        } else if (!findPeripheral(this.disconnectedPeripherals, peripheral.UUID)) {
             this.disconnectedPeripherals.push(peripheral);
             this.devicesFound++;
-            return;
         }
     }
 
-    public connect(peripheral: any, msg: boolean): void {
+    public connect(peripheral: UWEPeripheral, msg: boolean): void {
         if (this.connectingIds.has(peripheral.UUID)) {
             alert("Already connecting to " + peripheral.name);
             return;
@@ -136,20 +141,20 @@ export class ConnectComponent implements OnInit {
 
         this.connectingIds.add(peripheral.UUID);
         peripheral.connecting = true;
-        bluetooth.connect({
+        connect({
             UUID: peripheral.UUID,
-            onConnected: peripheral => this.onConnected(peripheral, msg),
+            onConnected: (peripheral: UWEPeripheral) => this.onConnected(peripheral, msg),
             onDisconnected: () => this.onDisconnected(peripheral)
         });
     }
 
-    public onConnected(peripheral: bluetooth.Peripheral, sendMessage: boolean): void {
+    public onConnected(peripheral: UWEPeripheral, sendMessage: boolean): void {
         if (sendMessage) {
             alert("Connected to " + peripheral.name);
         }
 
         // Save peripherals.
-        const tempPeripheral = findPeripheral(this.disconnectedKnownPeripherals, peripheral.UUID);
+        const tempPeripheral: UWEPeripheral = findPeripheral(this.disconnectedKnownPeripherals, peripheral.UUID);
 
         if (tempPeripheral != null) {
             peripheral = tempPeripheral;
@@ -159,16 +164,16 @@ export class ConnectComponent implements OnInit {
         deletePeripheral(this.disconnectedPeripherals, peripheral.UUID);
         addPeripheral(this.connectedPeripherals, peripheral);
 
-        const serializedPeripherals = JSON.stringify(Array.from(this.connectedPeripherals.concat(this.disconnectedKnownPeripherals)));
+        const serializedPeripherals: string = JSON.stringify(Array.from(this.connectedPeripherals.concat(this.disconnectedKnownPeripherals)));
 
         this.knownPeripheralsFile.writeText(serializedPeripherals).then(() => {
             console.log("Successfully saved known devices to file");
         });
 
-        const service = getUWESenseService(peripheral);
+        const service: UWEService = getUWESenseService(peripheral);
 
         if (service == null) {
-            bluetooth.disconnect({UUID: peripheral.UUID});
+            disconnect({UUID: peripheral.UUID});
             return;
         }
 
@@ -188,7 +193,7 @@ export class ConnectComponent implements OnInit {
             const resample = characteristic.resample;
             const time = (resample.hours * 60 * 60) + (resample.minutes * 60) + resample.seconds;
 
-            writes.push(bluetooth.write({
+            writes.push(write({
                 peripheralUUID: peripheral.UUID,
                 serviceUUID: SENSOR_SERVICE_ID,
                 characteristicUUID: characteristic.UUID,
@@ -217,7 +222,7 @@ export class ConnectComponent implements OnInit {
         });
     }
 
-    public onDisconnected(peripheral: any): void {
+    public onDisconnected(peripheral: UWEPeripheral): void {
         peripheral.connecting = false;
         this.connectingIds.delete(peripheral.UUID);
 
@@ -230,31 +235,31 @@ export class ConnectComponent implements OnInit {
         alert("Disconnected from " + peripheral.name);
     }
 
-    public subscribe(peripheral): void {
-        const service = getUWESenseService(peripheral);
+    public subscribe(peripheral: UWEPeripheral): void {
+        const service: UWEService = getUWESenseService(peripheral);
 
         for (let i = 0; i < service.characteristics.length; i++) {
             const characteristicId: string = service.characteristics[i].UUID;
-            const typeId = NOTIFY_CHARACTERISTICS[characteristicId];
+            const typeId: string = NOTIFY_CHARACTERISTICS[characteristicId];
 
             if (!typeId) {
                 continue;
             }
 
-            bluetooth.startNotifying({
+            startNotifying({
                 peripheralUUID: peripheral.UUID,
                 serviceUUID: service.UUID,
                 characteristicUUID: characteristicId,
-                onNotify: result => this.onNotify(peripheral, typeId, result)
+                onNotify: (result: ReadResult) => this.onNotify(peripheral, typeId, result)
             }).then(() => {
                 console.log("Notifications subscribed");
             });
         }
     }
 
-    public onNotify(peripheral, typeId, result): void {
-        const data = new Uint8Array(result.value);
-        const value = data[1];
+    public onNotify(peripheral: UWEPeripheral, typeId: string, result: ReadResult): void {
+        const data: Uint8Array = new Uint8Array(result.value);
+        const value: number = data[1];
         console.log("Received data for " + typeId + ": " + value);
 
         const reading: SensorReading = {

@@ -1,11 +1,12 @@
 import {SENSOR_SERVICE_ID} from "./configuration";
+import {UWECharacteristic, UWEPeripheral, UWEService} from "./interfaces";
 
-export function addPeripheral(peripherals: any[], peripheral: any): void {
+export function addPeripheral(peripherals: UWEPeripheral[], peripheral: UWEPeripheral): void {
     deletePeripheral(peripherals, peripheral.UUID);
     peripherals.push(peripheral);
 }
 
-export function deletePeripheral(peripherals: any[], peripheralId: string): void {
+export function deletePeripheral(peripherals: UWEPeripheral[], peripheralId: string): void {
     for (let i = 0; i < peripherals.length; i++) {
         if (peripherals[i].UUID == peripheralId) {
             peripherals.splice(i, 1);
@@ -13,16 +14,16 @@ export function deletePeripheral(peripherals: any[], peripheralId: string): void
     }
 }
 
-export function findPeripheral(peripherals: any[], uuid: string) {
+export function findPeripheral(peripherals: UWEPeripheral[], peripheralId: string): UWEPeripheral {
     for (let peripheral of peripherals) {
-        if (peripheral.UUID == uuid) {
+        if (peripheral.UUID == peripheralId) {
             return peripheral;
         }
     }
     return null;
 }
 
-export function getUWESenseService(peripheral) {
+export function getUWESenseService(peripheral: UWEPeripheral): UWEService {
     for (let i = 0; i < peripheral.services.length; i++) {
         const service = peripheral.services[i];
 
@@ -34,7 +35,7 @@ export function getUWESenseService(peripheral) {
 }
 
 
-export function getCharacteristic(service, characteristicId) {
+export function getCharacteristic(service, characteristicId): UWECharacteristic {
     for (let i = 0; i < service.characteristics.length; i++) {
         const characteristic = service.characteristics[i];
         if (characteristic.UUID == characteristicId) {

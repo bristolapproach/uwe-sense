@@ -1,8 +1,8 @@
 {
-	"description": "NativeScript Application",
+	"description": "UWE Sense",
 	"license": "SEE LICENSE IN <your-license-filename>",
-	"readme": "NativeScript Application",
-	"repository": "<fill-your-repository-here>",
+	"readme": "UWE Sense",
+	"repository": "https://github.com/bristolapproach/uwe-sense",
 	"nativescript": {
 		"id": "org.nativescript.angular",
 		"tns-android": {

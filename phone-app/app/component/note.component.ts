@@ -1,7 +1,8 @@
 import {Component, OnInit} from "@angular/core";
 import {TextDecoder} from "text-encoding";
-import {ApiService, Note} from "../app.service";
+import {ApiService} from "../app.service";
 import {RouterExtensions} from "nativescript-angular";
+import {Note} from "../interfaces";
 
 @Component({
     selector: "ns-items",

@@ -11,9 +11,9 @@ import firebase = require("nativescript-plugin-firebase");
 })
 export class LoginComponent implements OnInit {
 
+    private static fireBaseInitComplete: boolean = false;
     private loginStatus: string = "";
     private loggingIn: boolean = false;
-    private fireBaseInitComplete: boolean = false;
     private account: firebase.User;
 
     constructor(private routerExtensions: RouterExtensions,
@@ -40,11 +40,11 @@ export class LoginComponent implements OnInit {
         this.loggingIn = true;
 
         // Initialize FireBase.
-        this.initFireBase().then(() => {
+        LoginComponent.initFireBase().then(() => {
 
             // Login via Google.
             this.loginStatus = "Logging in";
-            this.fireBaseInitComplete = true;
+            LoginComponent.fireBaseInitComplete = true;
             return firebase.login({type: firebase.LoginType.GOOGLE});
 
         }).then((account: firebase.User) => {
@@ -81,8 +81,8 @@ export class LoginComponent implements OnInit {
         });
     }
 
-    public initFireBase(): Promise<void> {
-        if (this.fireBaseInitComplete) {
+    public static initFireBase(): Promise<void> {
+        if (LoginComponent.fireBaseInitComplete) {
             return Promise.resolve();
         }
 

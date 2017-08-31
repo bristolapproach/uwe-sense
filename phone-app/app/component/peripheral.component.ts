@@ -8,6 +8,8 @@ import {RouterExtensions} from "nativescript-angular";
 import {ListPicker} from "tns-core-modules/ui/list-picker";
 import {DEFAULT_RESAMPLE_RATE, NOTIFY_CHARACTERISTICS, SENSOR_SERVICE_ID} from "../configuration";
 import {findPeripheral, getCharacteristic, getUWESenseService} from "../util";
+import {UWECharacteristic, UWEPeripheral, UWEService} from "../interfaces";
+import {File} from "tns-core-modules/file-system";
 
 @Component({
     selector: "ns-items",
@@ -17,12 +19,14 @@ import {findPeripheral, getCharacteristic, getUWESenseService} from "../util";
 export class PeripheralComponent implements OnInit {
 
     private updating: boolean = false;
-    private peripheral;
-    private service;
-    private knownPeripherals = [];
-    private knownPeripheralsFile;
-    private characteristics = [];
+    private peripheralId: string;
+    private peripheral: UWEPeripheral;
+    private service: UWEService;
+    private knownPeripherals: UWEPeripheral[] = [];
+    private knownPeripheralsFile: File;
 
+    // noinspection JSMismatchedCollectionQueryUpdate
+    private characteristics: UWECharacteristic[] = [];
     // noinspection JSUnusedLocalSymbols
     private zeroToSixty = Array(60).fill(1, 61).map((x, i) => i);
     // noinspection JSUnusedLocalSymbols
@@ -30,10 +34,7 @@ export class PeripheralComponent implements OnInit {
 
     constructor(private routerExtensions: RouterExtensions,
                 private route: ActivatedRoute) {
-        this.peripheral = {
-            UUID: route.snapshot.params["peripheralId"],
-            name: route.snapshot.params["peripheralName"]
-        };
+        this.peripheralId = route.snapshot.params["peripheralId"];
     }
 
     ngOnInit(): void {
@@ -44,7 +45,7 @@ export class PeripheralComponent implements OnInit {
             }
 
             this.knownPeripherals = JSON.parse(content);
-            this.peripheral = findPeripheral(this.knownPeripherals, this.peripheral.UUID);
+            this.peripheral = findPeripheral(this.knownPeripherals, this.peripheralId);
             this.service = getUWESenseService(this.peripheral);
 
             if (this.service == null) {
@@ -140,35 +141,35 @@ export class PeripheralComponent implements OnInit {
     }
 
     public changeHours(args, id) {
-        let picker = <ListPicker>args.object;
+        const picker = <ListPicker>args.object;
         const characteristic = getCharacteristic(this.service, id);
 
-        if (characteristic["resample"] == null) {
-            characteristic["resample"] = {};
+        if (characteristic.resample == null) {
+            characteristic.resample = DEFAULT_RESAMPLE_RATE;
         }
 
-        characteristic["resample"]["hours"] = picker.selectedIndex;
+        characteristic.resample.hours = picker.selectedIndex;
     }
 
     public changeMinutes(args, id) {
-        let picker = <ListPicker>args.object;
-        const characteristic = getCharacteristic(this.service, id);
+        const picker = <ListPicker>args.object;
+        const characteristic: UWECharacteristic = getCharacteristic(this.service, id);
 
-        if (characteristic["resample"] == null) {
-            characteristic["resample"] = {};
+        if (characteristic.resample == null) {
+            characteristic.resample = DEFAULT_RESAMPLE_RATE;
         }
 
-        characteristic["resample"]["minutes"] = picker.selectedIndex;
+        characteristic.resample.minutes = picker.selectedIndex;
     }
 
     public changeSeconds(args, id) {
-        let picker = <ListPicker>args.object;
+        const picker = <ListPicker>args.object;
         const characteristic = getCharacteristic(this.service, id);
 
-        if (characteristic["resample"] == null) {
-            characteristic["resample"] = {};
+        if (characteristic.resample == null) {
+            characteristic.resample = DEFAULT_RESAMPLE_RATE;
         }
 
-        characteristic["resample"]["seconds"] = picker.selectedIndex;
+        characteristic.resample.seconds = picker.selectedIndex;
     }
 }

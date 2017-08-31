@@ -50,9 +50,9 @@ export class SessionComponent implements OnInit {
     logout(): void {
         this.loggingOut = true;
         firebase.logout().then(() => {
-            this.routerExtensions.navigate(["/login"], {clearHistory: true}).then(() => {
-                alert("Successfully logged out!")
-            });
+            return this.routerExtensions.navigate(["/login"], {clearHistory: true});
+        }).then(() => {
+            alert("Successfully logged out!")
         });
     }
 }

@@ -1,6 +1,7 @@
 import {Injectable} from "@angular/core";
 import "rxjs/add/operator/map";
-import * as geolocation from "nativescript-geolocation";
+import {enableLocationRequest, getCurrentLocation, isEnabled} from "nativescript-geolocation";
+import {CreateDevice, LocationData, Note, SensorReading} from "./interfaces";
 
 const http = require("http");
 
@@ -149,39 +150,16 @@ export class ApiService {
             return Promise.resolve();
         }
 
-        if (!geolocation.isEnabled()) {
-            return geolocation.enableLocationRequest(true).then(() => {
-                return geolocation.getCurrentLocation({});
+        if (!isEnabled()) {
+            return enableLocationRequest(true).then(() => {
+                return getCurrentLocation({});
             }).then(location => {
                 data.location = location;
             });
         }
 
-        geolocation.getCurrentLocation({}).then(location => {
+        getCurrentLocation({}).then(location => {
             data.location = location;
         });
     }
-}
-
-export interface CreateDevice {
-    deviceId: string;
-    typeIds: string[];
-}
-
-export interface LocationData {
-    location?: geolocation.Location;
-}
-
-export interface SensorReading extends LocationData {
-    session: Date;
-    deviceId: string;
-    typeId: string;
-    timestamp: Date;
-    data: number;
-}
-
-export interface Note extends LocationData {
-    session: Date;
-    text: string;
-    timestamp: Date;
 }
