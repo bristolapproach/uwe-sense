@@ -4,7 +4,12 @@ import {TextDecoder} from "text-encoding";
 import {ApiService, SensorReading} from "../app.service";
 import * as fileSystem from "file-system";
 import {RouterExtensions} from "nativescript-angular";
-import {NOTIFY_CHARACTERISTICS, SCAN_DURATION_SECONDS, SENSOR_SERVICE_ID} from "../configuration";
+import {
+    DEFAULT_RESAMPLE_RATE,
+    NOTIFY_CHARACTERISTICS,
+    SCAN_DURATION_SECONDS,
+    SENSOR_SERVICE_ID
+} from "../configuration";
 
 @Component({
     selector: "ns-items",
@@ -34,9 +39,17 @@ export class ConnectComponent implements OnInit {
             }
 
             this.disconnectedKnownPeripherals = JSON.parse(content);
+            console.log("CONNECT PERI: " + JSON.stringify(this.disconnectedKnownPeripherals));
 
             for (let i = 0; i < this.disconnectedKnownPeripherals.length; i++) {
-                this.connect(this.disconnectedKnownPeripherals[i], false);
+                const peripheral = this.disconnectedKnownPeripherals[i];
+
+                if (ConnectComponent.findPeripheral(this.connectedPeripherals, peripheral.UUID)) {
+                    ConnectComponent.deletePeripheral(this.disconnectedKnownPeripherals, peripheral.UUID);
+                    continue;
+                }
+
+                this.connect(peripheral, false);
             }
         });
     }
@@ -124,6 +137,7 @@ export class ConnectComponent implements OnInit {
             onDisconnected: () => {
                 this.connectingIds.delete(peripheral.UUID);
                 ConnectComponent.deletePeripheral(this.connectedPeripherals, peripheral.UUID);
+                ConnectComponent.addPeripheral(this.disconnectedKnownPeripherals, peripheral);
                 peripheral.connecting = false;
                 this.zone.run(() => {
                 }); // Force page refresh, for some reason it doesn't naturally update here.
@@ -134,23 +148,51 @@ export class ConnectComponent implements OnInit {
 
     connectCallback(peripheral: bluetooth.Peripheral): void {
         // Save peripherals.
-        this.connectedPeripherals.push(peripheral);
-        const serializedPeripherals = JSON.stringify(Array.from(this.connectedPeripherals));
+        const tempPeripheral = ConnectComponent.findPeripheral(this.disconnectedKnownPeripherals, peripheral.UUID);
+
+        if (tempPeripheral != null) {
+            peripheral = tempPeripheral;
+        }
+
+        ConnectComponent.deletePeripheral(this.disconnectedKnownPeripherals, peripheral.UUID);
+        ConnectComponent.deletePeripheral(this.disconnectedPeripherals, peripheral.UUID);
+        ConnectComponent.addPeripheral(this.connectedPeripherals, peripheral);
+
+        const serializedPeripherals = JSON.stringify(Array.from(this.connectedPeripherals.concat(this.disconnectedKnownPeripherals)));
 
         this.knownPeripheralsFile.writeText(serializedPeripherals).then(() => {
             console.log("Successfully saved known devices to file");
         });
 
-        const service = ConnectComponent.getAirMonitorService(peripheral);
+        const service = ConnectComponent.getUWESenseService(peripheral);
 
         if (service == null) {
             bluetooth.disconnect({UUID: peripheral.UUID});
             return;
         }
 
-        ConnectComponent.deletePeripheral(this.disconnectedKnownPeripherals, peripheral.UUID);
-        ConnectComponent.deletePeripheral(this.disconnectedPeripherals, peripheral.UUID);
-        ConnectComponent.addPeripheral(this.connectedPeripherals, peripheral);
+        for (let i = 0; i < service.characteristics.length; i++) {
+            const characteristic = service.characteristics[i];
+
+            if (!NOTIFY_CHARACTERISTICS.hasOwnProperty(characteristic.UUID)) {
+                continue;
+            }
+
+            if (!characteristic.hasOwnProperty("resample")) {
+                characteristic.resample = DEFAULT_RESAMPLE_RATE;
+            }
+
+            const resample = characteristic.resample;
+            const time = (resample.hours * 60 * 60) + (resample.minutes * 60) + resample.seconds;
+
+            bluetooth.write({
+                peripheralUUID: peripheral.UUID,
+                serviceUUID: SENSOR_SERVICE_ID,
+                characteristicUUID: characteristic.UUID,
+                value: '0x' + time.toString(16)
+            });
+        }
+
         this.zone.run(() => {
         }); // Force page refresh, for some reason it doesn't naturally update here.
 
@@ -220,7 +262,7 @@ export class ConnectComponent implements OnInit {
         return null;
     }
 
-    static getAirMonitorService(peripheral) {
+    static getUWESenseService(peripheral) {
         for (let i = 0; i < peripheral.services.length; i++) {
             const service = peripheral.services[i];
 

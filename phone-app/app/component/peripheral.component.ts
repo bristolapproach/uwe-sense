@@ -7,7 +7,7 @@ import * as dialogs from "ui/dialogs";
 import * as fileSystem from "file-system";
 import {RouterExtensions} from "nativescript-angular";
 import {ListPicker} from "tns-core-modules/ui/list-picker";
-import {SENSOR_SERVICE_ID} from "../configuration";
+import {DEFAULT_RESAMPLE_RATE, NOTIFY_CHARACTERISTICS, SENSOR_SERVICE_ID} from "../configuration";
 
 @Component({
     selector: "ns-items",
@@ -18,12 +18,10 @@ export class PeripheralComponent implements OnInit {
 
     private updating: boolean = false;
     private peripheral;
+    private service;
     private knownPeripherals = [];
     private knownPeripheralsFile;
-
-    private seconds;
-    private minutes;
-    private hours;
+    private characteristics = [];
 
     // noinspection JSUnusedLocalSymbols
     private zeroToSixty = Array(60).fill(1, 61).map((x, i) => i);
@@ -47,29 +45,62 @@ export class PeripheralComponent implements OnInit {
             }
 
             this.knownPeripherals = JSON.parse(content);
+            console.log("KNOWN PER: " + JSON.stringify(this.knownPeripherals));
+            this.peripheral = PeripheralComponent.findPeripheral(this.knownPeripherals, this.peripheral.UUID);
+            this.service = PeripheralComponent.getUWESenseService(this.peripheral);
+
+            if (this.service == null) {
+                return;
+            }
+
+            for (let id in NOTIFY_CHARACTERISTICS) {
+                const characteristic = PeripheralComponent.getCharacteristic(this.service, id);
+
+                if (!NOTIFY_CHARACTERISTICS.hasOwnProperty(id) ||
+                    characteristic == null) {
+                    continue;
+                }
+
+                if (!characteristic.hasOwnProperty("resample")) {
+                    characteristic.resample = DEFAULT_RESAMPLE_RATE;
+                }
+
+                characteristic["friendlyName"] = NOTIFY_CHARACTERISTICS[id];
+
+                this.characteristics.push(characteristic);
+            }
         });
     }
 
     update(): void {
         this.updating = true;
 
-        const time = (this.hours * 60 * 60) + (this.minutes * 60) + this.seconds;
+        for (let i = 0; i < this.service.characteristics.length; i++) {
+            const characteristic = this.service.characteristics[i];
 
-        // bluetooth.write({
-        //     peripheralUUID: this.peripheral.UUID,
-        //     serviceUUID: SENSOR_SERVICE_ID,
-        //     characteristicUUID: SENSOR_CHARACTERISTIC_WRITE_ID,
-        //     value: '0x' + time.toString(16)
-        // }).then(() => {
-        //     dialogs.alert("Device successfully updated").then(() => {
-        //         this.routerExtensions.back();
-        //     });
-        // }, error => {
-        //     console.log(error);
-            dialogs.alert("Device update failed").then(() => {
+            if (!NOTIFY_CHARACTERISTICS.hasOwnProperty(characteristic.UUID)) {
+                continue;
+            }
+
+            const resample = characteristic.resample;
+            const time = (resample.hours * 60 * 60) + (resample.minutes * 60) + resample.seconds;
+
+            bluetooth.write({
+                peripheralUUID: this.peripheral.UUID,
+                serviceUUID: SENSOR_SERVICE_ID,
+                characteristicUUID: characteristic.UUID,
+                value: '0x' + time.toString(16)
+            });
+        }
+
+        const serializedPeripherals = JSON.stringify(Array.from(this.knownPeripherals));
+
+        this.knownPeripheralsFile.writeText(serializedPeripherals).then(() => {
+            dialogs.alert("Device successfully updated").then(() => {
                 this.routerExtensions.back();
             });
-        // });
+            console.log("Successfully saved known devices to file");
+        });
 
         this.updating = false;
     }
@@ -86,12 +117,12 @@ export class PeripheralComponent implements OnInit {
                 return;
             }
 
-            // TODO: Unregister the device.
             for (let i = 0; i < this.knownPeripherals.length; i++) {
                 if (this.knownPeripherals[i].UUID == this.peripheral.UUID) {
                     this.knownPeripherals.splice(i, 1);
                 }
             }
+
             const serializedPeripherals = JSON.stringify(Array.from(this.knownPeripherals));
             console.log("WRITING: " + serializedPeripherals);
             this.knownPeripheralsFile.writeText(serializedPeripherals).then(value => {
@@ -106,18 +137,66 @@ export class PeripheralComponent implements OnInit {
         });
     }
 
-    public changeHours(args) {
+    public changeHours(args, id) {
         let picker = <ListPicker>args.object;
-        this.hours = picker.selectedIndex;
+        const characteristic = PeripheralComponent.getCharacteristic(this.service, id);
+
+        if (characteristic["resample"] == null) {
+            characteristic["resample"] = {};
+        }
+
+        characteristic["resample"]["hours"] = picker.selectedIndex;
     }
 
-    public changeMinutes(args) {
+    public changeMinutes(args, id) {
         let picker = <ListPicker>args.object;
-        this.minutes = picker.selectedIndex;
+        const characteristic = PeripheralComponent.getCharacteristic(this.service, id);
+
+        if (characteristic["resample"] == null) {
+            characteristic["resample"] = {};
+        }
+
+        characteristic["resample"]["minutes"] = picker.selectedIndex;
     }
 
-    public changeSeconds(args) {
+    public changeSeconds(args, id) {
         let picker = <ListPicker>args.object;
-        this.seconds = picker.selectedIndex;
+        const characteristic = PeripheralComponent.getCharacteristic(this.service, id);
+
+        if (characteristic["resample"] == null) {
+            characteristic["resample"] = {};
+        }
+
+        characteristic["resample"]["seconds"] = picker.selectedIndex;
+    }
+
+    static findPeripheral(peripherals: any[], uuid: string) {
+        for (let peripheral of peripherals) {
+            if (peripheral.UUID == uuid) {
+                return peripheral;
+            }
+        }
+        return null;
+    }
+
+    static getUWESenseService(peripheral) {
+        for (let i = 0; i < peripheral.services.length; i++) {
+            const service = peripheral.services[i];
+
+            if (service.UUID == SENSOR_SERVICE_ID) {
+                return service;
+            }
+        }
+        return null;
+    }
+
+    static getCharacteristic(service, characteristicId) {
+        for (let i = 0; i < service.characteristics.length; i++) {
+            const characteristic = service.characteristics[i];
+            if (characteristic.UUID == characteristicId) {
+                return characteristic;
+            }
+        }
+        return null;
     }
 }

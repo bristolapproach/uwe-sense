@@ -2,14 +2,20 @@
 <ScrollView>
     <StackLayout class="page" orientation="vertical">
         <Label text="Configure {{ peripheral.name }}" class="title"></Label>
-        <Label text="Resample rate (hh:mm:ss)" class="subtitle"></Label>
-        <StackLayout class="page" orientation="horizontal" horizontalAlignment="center">
-            <ListPicker class="timepicker" [items]="zeroToTwentyFour"
-                        (selectedIndexChange)="changeHours($event)"></ListPicker>
-            <ListPicker class="timepicker" [items]="zeroToSixty"
-                        (selectedIndexChange)="changeMinutes($event)"></ListPicker>
-            <ListPicker class="timepicker" [items]="zeroToSixty"
-                        (selectedIndexChange)="changeSeconds($event)"></ListPicker>
+        <Label *ngIf="characteristics.length > 0" text="Resample rate (hh:mm:ss)" class="subtitle"></Label>
+        <StackLayout *ngFor="let characteristic of characteristics" class="page" orientation="vertical" horizontalAlignment="center">
+            <Label text="{{characteristic.friendlyName}}"></Label>
+            <StackLayout class="page" orientation="horizontal" horizontalAlignment="center">
+                <ListPicker class="timepicker" [items]="zeroToTwentyFour"
+                            selectedIndex="{{characteristic.resample.hours}}"
+                            (selectedIndexChange)="changeHours($event, characteristic.UUID)"></ListPicker>
+                <ListPicker class="timepicker" [items]="zeroToSixty"
+                            selectedIndex="{{characteristic.resample.minutes}}"
+                            (selectedIndexChange)="changeMinutes($event, characteristic.UUID)"></ListPicker>
+                <ListPicker class="timepicker" [items]="zeroToSixty"
+                            selectedIndex="{{characteristic.resample.seconds}}"
+                            (selectedIndexChange)="changeSeconds($event, characteristic.UUID)"></ListPicker>
+            </StackLayout>
         </StackLayout>
         <Button class="{{ updating ? 'special' : 'none' }}"
                 text="{{ updating ? 'Updating \u27f2' : 'Update' }}"
