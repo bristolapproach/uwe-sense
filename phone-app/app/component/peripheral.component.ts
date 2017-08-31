@@ -87,7 +87,7 @@ export class PeripheralComponent implements OnInit {
                 peripheralUUID: this.peripheral.UUID,
                 serviceUUID: SENSOR_SERVICE_ID,
                 characteristicUUID: characteristic.UUID,
-                value: '0x' + time.toString(16)
+                value: "0x" + time.toString(16)
             });
         }
 

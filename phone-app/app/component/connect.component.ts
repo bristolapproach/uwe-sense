@@ -60,11 +60,11 @@ export class ConnectComponent implements OnInit {
             bluetooth.disconnect({UUID: peripheral.UUID});
         }
 
-        this.routerExtensions.navigate(['/session'], {clearHistory: true});
+        this.routerExtensions.navigate(["/session"], {clearHistory: true});
     }
 
     public addNote(): void {
-        this.routerExtensions.navigate(['/note'], {clearHistory: false});
+        this.routerExtensions.navigate(["/note"], {clearHistory: false});
     }
 
     public configure(peripheral: bluetooth.Peripheral): void {
@@ -73,7 +73,7 @@ export class ConnectComponent implements OnInit {
             peripheralName: peripheral.name
         };
 
-        this.routerExtensions.navigate(['/peripheral', params], {clearHistory: false});
+        this.routerExtensions.navigate(["/peripheral", params], {clearHistory: false});
     }
 
     public scan(): void {
@@ -192,7 +192,7 @@ export class ConnectComponent implements OnInit {
                 peripheralUUID: peripheral.UUID,
                 serviceUUID: SENSOR_SERVICE_ID,
                 characteristicUUID: characteristic.UUID,
-                value: '0x' + time.toString(16)
+                value: "0x" + time.toString(16)
             }));
         }
 

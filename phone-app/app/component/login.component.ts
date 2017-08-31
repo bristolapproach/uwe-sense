@@ -25,7 +25,7 @@ export class LoginComponent implements OnInit {
 
     public goAbout(): void {
         const params = {page: "/login"};
-        this.routerExtensions.navigate(['/about', params], {clearHistory: true});
+        this.routerExtensions.navigate(["/about", params], {clearHistory: true});
     }
 
     public login() {
@@ -64,17 +64,17 @@ export class LoginComponent implements OnInit {
 
             // Navigate to the "session" page.
             this.loginStatus = "Complete";
-            return this.routerExtensions.navigate(['/session'], {clearHistory: true});
+            return this.routerExtensions.navigate(["/session"], {clearHistory: true});
 
         }).then(() => {
 
-            // Alert the user their login was a success.
+            // Alert the user if their login was a success.
             this.loggingIn = false;
             alert("Successfully logged in as " + this.account.name);
 
         }, error => {
 
-            // Tell the user if an error occurred.
+            // Alert the user if an error occurred.
             this.loggingIn = false;
             alert("Failed to login: " + error);
 

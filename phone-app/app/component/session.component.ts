@@ -25,7 +25,7 @@ export class SessionComponent implements OnInit {
 
     startSession(): void {
         this.api.startNewSession();
-        this.routerExtensions.navigate(['/connect'], {clearHistory: true});
+        this.routerExtensions.navigate(["/connect"], {clearHistory: true});
     }
 
     toggleLocationTracking(): void {
@@ -44,13 +44,13 @@ export class SessionComponent implements OnInit {
 
     goAbout(): void {
         const params = {page: "/session"};
-        this.routerExtensions.navigate(['/about', params], {clearHistory: true});
+        this.routerExtensions.navigate(["/about", params], {clearHistory: true});
     }
 
     logout(): void {
         this.loggingOut = true;
         firebase.logout().then(() => {
-            this.routerExtensions.navigate(['/login'], {clearHistory: true}).then(() => {
+            this.routerExtensions.navigate(["/login"], {clearHistory: true}).then(() => {
                 alert("Successfully logged out!")
             });
         });
