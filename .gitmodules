@@ -1,0 +1,3 @@
+[submodule "research-electronics"]
+	path = research-electronics
+	url = git@gitlab.uwe.ac.uk:f3-barnes/research-electronics.git

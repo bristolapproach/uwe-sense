@@ -77,7 +77,9 @@
 #include "fstorage.h"
 #include "ble_conn_state.h"
 #include "nrf_drv_clock.h"
+
 #define NRF_LOG_MODULE_NAME "APP"
+
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 
@@ -144,29 +146,31 @@
 // UWE_Sense Button Service
 static ble_controller_t m_controller_service;
 
-static uint16_t  m_conn_handle = BLE_CONN_HANDLE_INVALID; /**< Handle of the current connection. */
-static ble_bas_t m_bas;                                   /**< Structure used to identify the battery service. */
-static ble_hrs_t m_hrs;                                   /**< Structure used to identify the heart rate service. */
-static bool      m_rr_interval_enabled = true;            /**< Flag for enabling and disabling the registration of new RR interval measurements (the purpose of disabling this is just to test sending HRM without RR interval data. */
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID; /**< Handle of the current connection. */
+static ble_bas_t m_bas;                                  /**< Structure used to identify the battery service. */
+static ble_hrs_t m_hrs;                                  /**< Structure used to identify the heart rate service. */
+static bool m_rr_interval_enabled = true;                /**< Flag for enabling and disabling the registration of new RR interval measurements (the purpose of disabling this is just to test sending HRM without RR interval data. */
 
-static sensorsim_cfg_t   m_battery_sim_cfg;               /**< Battery Level sensor simulator configuration. */
-static sensorsim_state_t m_battery_sim_state;             /**< Battery Level sensor simulator state. */
-static sensorsim_cfg_t   m_heart_rate_sim_cfg;            /**< Heart Rate sensor simulator configuration. */
-static sensorsim_state_t m_heart_rate_sim_state;          /**< Heart Rate sensor simulator state. */
-static sensorsim_cfg_t   m_rr_interval_sim_cfg;           /**< RR Interval sensor simulator configuration. */
-static sensorsim_state_t m_rr_interval_sim_state;         /**< RR Interval sensor simulator state. */
+static sensorsim_cfg_t m_battery_sim_cfg;               /**< Battery Level sensor simulator configuration. */
+static sensorsim_cfg_t m_heart_rate_sim_cfg;            /**< Heart Rate sensor simulator configuration. */
+static sensorsim_cfg_t m_rr_interval_sim_cfg;           /**< RR Interval sensor simulator configuration. */
 
-static ble_uuid_t m_adv_uuids[] =                         /**< Universally unique service identifiers. */
-{
-    {BLE_UWE_SENSE_BUTTON_SERVICE, BLE_UUID_TYPE_BLE},
-    {BLE_UUID_BATTERY_SERVICE, BLE_UUID_TYPE_BLE},
-    {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}
+static sensorsim_state_t m_battery_sim_state;           /**< Battery Level sensor simulator state. */
+static sensorsim_state_t m_heart_rate_sim_state;        /**< Heart Rate sensor simulator state. */
+static sensorsim_state_t m_rr_interval_sim_state;       /**< RR Interval sensor simulator state. */
+
+static ble_uuid_t m_adv_uuids[] = {                     /**< Universally unique service identifiers. */
+        {BLE_UWE_SENSE_BUTTON_SERVICE,        BLE_UUID_TYPE_BLE},
+        {BLE_UUID_BATTERY_SERVICE,            BLE_UUID_TYPE_BLE},
+        {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}
 };
 
 static TimerHandle_t m_battery_timer;        /**< Definition of battery timer. */
 static TimerHandle_t m_heart_rate_timer;     /**< Definition of heart rate timer. */
 static TimerHandle_t m_rr_interval_timer;    /**< Definition of RR interval timer. */
 static TimerHandle_t m_sensor_contact_timer; /**< Definition of sensor contact detected timer. */
+
+static long uwe_sense_task_delay;
 
 static SemaphoreHandle_t m_ble_event_ready;  /**< Semaphore raised if there is a new event to be processed in the BLE thread. */
 
@@ -176,13 +180,13 @@ static TaskHandle_t m_logger_thread;         /**< Definition of Logger thread. *
 static void advertising_start(void);
 
 static QueueHandle_t m_button_queue;
-static TaskHandle_t  m_sensor_thread;
+static TaskHandle_t m_sensor_thread;
 // allow up to 10 button presses to be queued
 #define BUTTON_QUEUE_SIZE 10
 
 enum button_press_bitfields {
-  BUTTON_NO_PRESS_BF=1,
-  BUTTON_LEFT_BF=2
+    BUTTON_NO_PRESS_BF = 1,
+    BUTTON_LEFT_BF = 2
 };
 
 #define PIN_OUT      LED_2
@@ -192,41 +196,38 @@ enum button_press_bitfields {
 // grove button
 #define BUTTON_LEFT 14
 
-inline uint8_t button_to_bitmapping(nrf_drv_gpiote_pin_t pin)
-{
-  switch(pin) {
-    case BUTTON_LEFT:
-      return BUTTON_LEFT_BF;
-  }
+inline uint8_t button_to_bitmapping(nrf_drv_gpiote_pin_t pin) {
+    switch (pin) {
+        case BUTTON_LEFT:
+            return BUTTON_LEFT_BF;
+    }
 
-  return BUTTON_NO_PRESS_BF;
+    return BUTTON_NO_PRESS_BF;
 }
 
-void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
-{
+void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
     BaseType_t yield_req = pdFALSE;
     //UNUSED_VARIABLE(xSemaphoreGiveFromISR(m_led_event_ready, &yield_req));
     uint8_t button_press = button_to_bitmapping(pin);
     UNUSED_VARIABLE(xQueueSendToBackFromISR(
-      m_button_queue,
-      (const void *)&button_press,
-      &yield_req));
+            m_button_queue,
+            (const void *) &button_press,
+            &yield_req));
 
     portYIELD_FROM_ISR(yield_req);
     //nrf_drv_gpiote_out_toggle(PIN_OUT);
 }
 
-inline void setup_button_pin(uint8_t button_pin)
-{
-  ret_code_t err_code;
+inline void setup_button_pin(uint8_t button_pin) {
+    ret_code_t err_code;
 
-  nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);//GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
-  in_config.pull = NRF_GPIO_PIN_PULLDOWN; //DOWN;
+    nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);//GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
+    in_config.pull = NRF_GPIO_PIN_PULLDOWN; //DOWN;
 
-  err_code = nrf_drv_gpiote_in_init(button_pin, &in_config, in_pin_handler);
-  APP_ERROR_CHECK(err_code);
+    err_code = nrf_drv_gpiote_in_init(button_pin, &in_config, in_pin_handler);
+    APP_ERROR_CHECK(err_code);
 
-  nrf_drv_gpiote_in_event_enable(button_pin, true);
+    nrf_drv_gpiote_in_event_enable(button_pin, true);
 }
 
 /**@brief Callback function for asserts in the SoftDevice.
@@ -240,8 +241,7 @@ inline void setup_button_pin(uint8_t button_pin)
  * @param[in]   line_num   Line number of the failing ASSERT call.
  * @param[in]   file_name  File name of the failing ASSERT call.
  */
-void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
-{
+void assert_nrf_callback(uint16_t line_num, const uint8_t *p_file_name) {
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
@@ -250,90 +250,85 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
  *
  * @param[in] p_evt  Peer Manager event.
  */
-static void pm_evt_handler(pm_evt_t const * p_evt)
-{
+static void pm_evt_handler(pm_evt_t const *p_evt) {
     ret_code_t err_code;
 
-    switch (p_evt->evt_id)
-    {
-        case PM_EVT_BONDED_PEER_CONNECTED:
-        {
+    switch (p_evt->evt_id) {
+        case PM_EVT_BONDED_PEER_CONNECTED: {
             NRF_LOG_INFO("Connected to a previously bonded device.\r\n");
-        } break;
+            break;
+        }
 
-        case PM_EVT_CONN_SEC_SUCCEEDED:
-        {
+        case PM_EVT_CONN_SEC_SUCCEEDED: {
             NRF_LOG_INFO("Connection secured. Role: %d. conn_handle: %d, Procedure: %d\r\n",
                          ble_conn_state_role(p_evt->conn_handle),
                          p_evt->conn_handle,
                          p_evt->params.conn_sec_succeeded.procedure);
-        } break;
+            break;
+        }
 
-        case PM_EVT_CONN_SEC_FAILED:
-        {
+        case PM_EVT_CONN_SEC_FAILED: {
             /* Often, when securing fails, it shouldn't be restarted, for security reasons.
              * Other times, it can be restarted directly.
              * Sometimes it can be restarted, but only after changing some Security Parameters.
              * Sometimes, it cannot be restarted until the link is disconnected and reconnected.
              * Sometimes it is impossible, to secure the link, or the peer device does not support it.
              * How to handle this error is highly application dependent. */
-        } break;
+            break;
+        }
 
-        case PM_EVT_CONN_SEC_CONFIG_REQ:
-        {
+        case PM_EVT_CONN_SEC_CONFIG_REQ: {
             // Reject pairing request from an already bonded peer.
             pm_conn_sec_config_t conn_sec_config = {.allow_repairing = false};
             pm_conn_sec_config_reply(p_evt->conn_handle, &conn_sec_config);
-        } break;
+            break;
+        }
 
-        case PM_EVT_STORAGE_FULL:
-        {
+        case PM_EVT_STORAGE_FULL: {
             // Run garbage collection on the flash.
             err_code = fds_gc();
-            if (err_code == FDS_ERR_BUSY || err_code == FDS_ERR_NO_SPACE_IN_QUEUES)
-            {
+            if (err_code == FDS_ERR_BUSY || err_code == FDS_ERR_NO_SPACE_IN_QUEUES) {
                 // Retry.
-            }
-            else
-            {
+            } else {
                 APP_ERROR_CHECK(err_code);
             }
-        } break;
+            break;
+        }
 
-        case PM_EVT_PEERS_DELETE_SUCCEEDED:
-        {
+        case PM_EVT_PEERS_DELETE_SUCCEEDED: {
             advertising_start();
-        } break;
+            break;
+        }
 
-        case PM_EVT_LOCAL_DB_CACHE_APPLY_FAILED:
-        {
+        case PM_EVT_LOCAL_DB_CACHE_APPLY_FAILED: {
             // The local database has likely changed, send service changed indications.
             pm_local_database_has_changed();
-        } break;
+            break;
+        }
 
-        case PM_EVT_PEER_DATA_UPDATE_FAILED:
-        {
+        case PM_EVT_PEER_DATA_UPDATE_FAILED: {
             // Assert.
             APP_ERROR_CHECK(p_evt->params.peer_data_update_failed.error);
-        } break;
+            break;
+        }
 
-        case PM_EVT_PEER_DELETE_FAILED:
-        {
+        case PM_EVT_PEER_DELETE_FAILED: {
             // Assert.
             APP_ERROR_CHECK(p_evt->params.peer_delete_failed.error);
-        } break;
+            break;
+        }
 
-        case PM_EVT_PEERS_DELETE_FAILED:
-        {
+        case PM_EVT_PEERS_DELETE_FAILED: {
             // Assert.
             APP_ERROR_CHECK(p_evt->params.peers_delete_failed_evt.error);
-        } break;
+            break;
+        }
 
-        case PM_EVT_ERROR_UNEXPECTED:
-        {
+        case PM_EVT_ERROR_UNEXPECTED: {
             // Assert.
             APP_ERROR_CHECK(p_evt->params.error_unexpected.error);
-        } break;
+            break;
+        }
 
         case PM_EVT_CONN_SEC_START:
         case PM_EVT_PEER_DATA_UPDATE_SUCCEEDED:
@@ -350,20 +345,18 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
 /**@brief Function for performing battery measurement and updating the Battery Level characteristic
  *        in Battery Service.
  */
-static void battery_level_update(void)
-{
+static void battery_level_update(void) {
     uint32_t err_code;
-    uint8_t  battery_level;
+    uint8_t battery_level;
 
-    battery_level = (uint8_t)sensorsim_measure(&m_battery_sim_state, &m_battery_sim_cfg);
+    battery_level = (uint8_t) sensorsim_measure(&m_battery_sim_state, &m_battery_sim_cfg);
 
     err_code = ble_bas_battery_level_update(&m_bas, battery_level);
     if ((err_code != NRF_SUCCESS) &&
         (err_code != NRF_ERROR_INVALID_STATE) &&
         (err_code != BLE_ERROR_NO_TX_PACKETS) &&
         (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
-       )
-    {
+            ) {
         APP_ERROR_HANDLER(err_code);
     }
 }
@@ -376,8 +369,7 @@ static void battery_level_update(void)
  * @param[in] xTimer Handler to the timer that called this function.
  *                   You may get identifier given to the function xTimerCreate using pvTimerGetTimerID.
  */
-static void battery_level_meas_timeout_handler(TimerHandle_t xTimer)
-{
+static void battery_level_meas_timeout_handler(TimerHandle_t xTimer) {
     UNUSED_PARAMETER(xTimer);
     battery_level_update();
 }
@@ -391,15 +383,14 @@ static void battery_level_meas_timeout_handler(TimerHandle_t xTimer)
  * @param[in] xTimer Handler to the timer that called this function.
  *                   You may get identifier given to the function xTimerCreate using pvTimerGetTimerID.
  */
-static void heart_rate_meas_timeout_handler(TimerHandle_t xTimer)
-{
+static void heart_rate_meas_timeout_handler(TimerHandle_t xTimer) {
     static uint32_t cnt = 0;
-    uint32_t        err_code;
-    uint16_t        heart_rate;
+    uint32_t err_code;
+    uint16_t heart_rate;
 
     UNUSED_PARAMETER(xTimer);
 
-    heart_rate = (uint16_t)sensorsim_measure(&m_heart_rate_sim_state, &m_heart_rate_sim_cfg);
+    heart_rate = (uint16_t) sensorsim_measure(&m_heart_rate_sim_state, &m_heart_rate_sim_cfg);
 
     cnt++;
     //err_code = ble_hrs_heart_rate_measurement_send(&m_hrs, heart_rate);
@@ -407,8 +398,7 @@ static void heart_rate_meas_timeout_handler(TimerHandle_t xTimer)
         (err_code != NRF_ERROR_INVALID_STATE) &&
         (err_code != BLE_ERROR_NO_TX_PACKETS) &&
         (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
-       )
-    {
+            ) {
         APP_ERROR_HANDLER(err_code);
     }
 
@@ -426,16 +416,14 @@ static void heart_rate_meas_timeout_handler(TimerHandle_t xTimer)
  * @param[in] xTimer Handler to the timer that called this function.
  *                   You may get identifier given to the function xTimerCreate using pvTimerGetTimerID.
  */
-static void rr_interval_timeout_handler(TimerHandle_t xTimer)
-{
+static void rr_interval_timeout_handler(TimerHandle_t xTimer) {
     UNUSED_PARAMETER(xTimer);
 
-    if (m_rr_interval_enabled)
-    {
+    if (m_rr_interval_enabled) {
         uint16_t rr_interval;
 
-        rr_interval = (uint16_t)sensorsim_measure(&m_rr_interval_sim_state,
-                                                  &m_rr_interval_sim_cfg);
+        rr_interval = (uint16_t) sensorsim_measure(&m_rr_interval_sim_state,
+                                                   &m_rr_interval_sim_cfg);
         ble_hrs_rr_interval_add(&m_hrs, rr_interval);
     }
 }
@@ -448,8 +436,7 @@ static void rr_interval_timeout_handler(TimerHandle_t xTimer)
  * @param[in] xTimer Handler to the timer that called this function.
  *                   You may get identifier given to the function xTimerCreate using pvTimerGetTimerID.
  */
-static void sensor_contact_detected_timeout_handler(TimerHandle_t xTimer)
-{
+static void sensor_contact_detected_timeout_handler(TimerHandle_t xTimer) {
     static bool sensor_contact_detected = false;
 
     UNUSED_PARAMETER(xTimer);
@@ -463,8 +450,7 @@ static void sensor_contact_detected_timeout_handler(TimerHandle_t xTimer)
  *
  * @details Initializes the timer module. This creates and starts application timers.
  */
-static void timers_init(void)
-{
+static void timers_init(void) {
     // Initialize timer module.
     APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
 
@@ -491,11 +477,10 @@ static void timers_init(void)
                                           sensor_contact_detected_timeout_handler);
 
     /* Error checking */
-    if ( (NULL == m_battery_timer)
-         || (NULL == m_heart_rate_timer)
-         || (NULL == m_rr_interval_timer)
-         || (NULL == m_sensor_contact_timer) )
-    {
+    if ((NULL == m_battery_timer)
+        || (NULL == m_heart_rate_timer)
+        || (NULL == m_rr_interval_timer)
+        || (NULL == m_sensor_contact_timer)) {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 }
@@ -506,16 +491,15 @@ static void timers_init(void)
  * @details This function sets up all the necessary GAP (Generic Access Profile) parameters of the
  *          device including the device name, appearance, and the preferred connection parameters.
  */
-static void gap_params_init(void)
-{
-    uint32_t                err_code;
-    ble_gap_conn_params_t   gap_conn_params;
+static void gap_params_init(void) {
+    uint32_t err_code;
+    ble_gap_conn_params_t gap_conn_params;
     ble_gap_conn_sec_mode_t sec_mode;
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
 
     err_code = sd_ble_gap_device_name_set(&sec_mode,
-                                          (const uint8_t *)DEVICE_NAME,
+                                          (const uint8_t *) DEVICE_NAME,
                                           strlen(DEVICE_NAME));
     APP_ERROR_CHECK(err_code);
 
@@ -526,31 +510,33 @@ static void gap_params_init(void)
 
     gap_conn_params.min_conn_interval = MIN_CONN_INTERVAL;
     gap_conn_params.max_conn_interval = MAX_CONN_INTERVAL;
-    gap_conn_params.slave_latency     = SLAVE_LATENCY;
-    gap_conn_params.conn_sup_timeout  = CONN_SUP_TIMEOUT;
+    gap_conn_params.slave_latency = SLAVE_LATENCY;
+    gap_conn_params.conn_sup_timeout = CONN_SUP_TIMEOUT;
 
     err_code = sd_ble_gap_ppcp_set(&gap_conn_params);
     APP_ERROR_CHECK(err_code);
 }
 
 static void controller_write_handler(
-  ble_controller_t * p_controller,
-  uint8_t controller_state)
-{
+        ble_controller_t *p_controller,
+        long new_task_delay) {
+    uwe_sense_task_delay = new_task_delay;
 
+    ble_controller_send_click(
+            &m_controller_service,
+            new_task_delay);
 }
 
 /**@brief Function for initializing services that will be used by the application.
  *
  * @details Initialize the Heart Rate, Battery and Device Information services.
  */
-static void services_init(void)
-{
-    uint32_t       err_code;
+static void services_init(void) {
+    uint32_t err_code;
     ble_hrs_init_t hrs_init;
     ble_bas_init_t bas_init;
     ble_dis_init_t dis_init;
-    uint8_t        body_sensor_location;
+    uint8_t body_sensor_location;
 
     // Initialize Heart Rate Service.
     body_sensor_location = BLE_HRS_BODY_SENSOR_LOCATION_FINGER;
@@ -589,10 +575,10 @@ static void services_init(void)
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&bas_init.battery_level_report_read_perm);
 
-    bas_init.evt_handler          = NULL;
+    bas_init.evt_handler = NULL;
     bas_init.support_notification = true;
-    bas_init.p_report_ref         = NULL;
-    bas_init.initial_batt_level   = 100;
+    bas_init.p_report_ref = NULL;
+    bas_init.initial_batt_level = 100;
 
     err_code = ble_bas_init(&m_bas, &bas_init);
     APP_ERROR_CHECK(err_code);
@@ -600,7 +586,7 @@ static void services_init(void)
     // Initialize Device Information Service.
     memset(&dis_init, 0, sizeof(dis_init));
 
-    ble_srv_ascii_to_utf8(&dis_init.manufact_name_str, (char *)MANUFACTURER_NAME);
+    ble_srv_ascii_to_utf8(&dis_init.manufact_name_str, (char *) MANUFACTURER_NAME);
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&dis_init.dis_attr_md.read_perm);
     BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&dis_init.dis_attr_md.write_perm);
@@ -612,25 +598,24 @@ static void services_init(void)
 
 /**@brief Function for initializing the sensor simulators.
  */
-static void sensor_simulator_init(void)
-{
-    m_battery_sim_cfg.min          = MIN_BATTERY_LEVEL;
-    m_battery_sim_cfg.max          = MAX_BATTERY_LEVEL;
-    m_battery_sim_cfg.incr         = BATTERY_LEVEL_INCREMENT;
+static void sensor_simulator_init(void) {
+    m_battery_sim_cfg.min = MIN_BATTERY_LEVEL;
+    m_battery_sim_cfg.max = MAX_BATTERY_LEVEL;
+    m_battery_sim_cfg.incr = BATTERY_LEVEL_INCREMENT;
     m_battery_sim_cfg.start_at_max = true;
 
     sensorsim_init(&m_battery_sim_state, &m_battery_sim_cfg);
 
-    m_heart_rate_sim_cfg.min          = MIN_HEART_RATE;
-    m_heart_rate_sim_cfg.max          = MAX_HEART_RATE;
-    m_heart_rate_sim_cfg.incr         = HEART_RATE_INCREMENT;
+    m_heart_rate_sim_cfg.min = MIN_HEART_RATE;
+    m_heart_rate_sim_cfg.max = MAX_HEART_RATE;
+    m_heart_rate_sim_cfg.incr = HEART_RATE_INCREMENT;
     m_heart_rate_sim_cfg.start_at_max = false;
 
     sensorsim_init(&m_heart_rate_sim_state, &m_heart_rate_sim_cfg);
 
-    m_rr_interval_sim_cfg.min          = MIN_RR_INTERVAL;
-    m_rr_interval_sim_cfg.max          = MAX_RR_INTERVAL;
-    m_rr_interval_sim_cfg.incr         = RR_INTERVAL_INCREMENT;
+    m_rr_interval_sim_cfg.min = MIN_RR_INTERVAL;
+    m_rr_interval_sim_cfg.max = MAX_RR_INTERVAL;
+    m_rr_interval_sim_cfg.incr = RR_INTERVAL_INCREMENT;
     m_rr_interval_sim_cfg.start_at_max = false;
 
     sensorsim_init(&m_rr_interval_sim_state, &m_rr_interval_sim_cfg);
@@ -639,23 +624,18 @@ static void sensor_simulator_init(void)
 
 /**@brief Function for starting application timers.
  */
-static void application_timers_start(void)
-{
+static void application_timers_start(void) {
     // Start application timers.
-    if (pdPASS != xTimerStart(m_battery_timer, OSTIMER_WAIT_FOR_QUEUE))
-    {
+    if (pdPASS != xTimerStart(m_battery_timer, OSTIMER_WAIT_FOR_QUEUE)) {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
-    if (pdPASS != xTimerStart(m_heart_rate_timer, OSTIMER_WAIT_FOR_QUEUE))
-    {
+    if (pdPASS != xTimerStart(m_heart_rate_timer, OSTIMER_WAIT_FOR_QUEUE)) {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
-    if (pdPASS != xTimerStart(m_rr_interval_timer, OSTIMER_WAIT_FOR_QUEUE))
-    {
+    if (pdPASS != xTimerStart(m_rr_interval_timer, OSTIMER_WAIT_FOR_QUEUE)) {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
-    if (pdPASS != xTimerStart(m_sensor_contact_timer, OSTIMER_WAIT_FOR_QUEUE))
-    {
+    if (pdPASS != xTimerStart(m_sensor_contact_timer, OSTIMER_WAIT_FOR_QUEUE)) {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 }
@@ -671,12 +651,10 @@ static void application_timers_start(void)
  *
  * @param[in]   p_evt   Event received from the Connection Parameters Module.
  */
-static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
-{
+static void on_conn_params_evt(ble_conn_params_evt_t *p_evt) {
     uint32_t err_code;
 
-    if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
-    {
+    if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED) {
         err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
         APP_ERROR_CHECK(err_code);
     }
@@ -687,33 +665,31 @@ static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
  *
  * @param[in]   nrf_error   Error code containing information about what went wrong.
  */
-static void conn_params_error_handler(uint32_t nrf_error)
-{
+static void conn_params_error_handler(uint32_t nrf_error) {
     APP_ERROR_HANDLER(nrf_error);
 }
 
 
 /**@brief Function for initializing the Connection Parameters module.
  */
-static void conn_params_init(void)
-{
-    uint32_t               err_code;
+static void conn_params_init(void) {
+    uint32_t err_code;
     ble_conn_params_init_t cp_init;
 
     memset(&cp_init, 0, sizeof(cp_init));
 
-    cp_init.p_conn_params                  = NULL;
+    cp_init.p_conn_params = NULL;
     cp_init.first_conn_params_update_delay = FIRST_CONN_PARAMS_UPDATE_DELAY;
-    cp_init.next_conn_params_update_delay  = NEXT_CONN_PARAMS_UPDATE_DELAY;
-    cp_init.max_conn_params_update_count   = MAX_CONN_PARAMS_UPDATE_COUNT;
+    cp_init.next_conn_params_update_delay = NEXT_CONN_PARAMS_UPDATE_DELAY;
+    cp_init.max_conn_params_update_count = MAX_CONN_PARAMS_UPDATE_COUNT;
 
-    cp_init.start_on_notify_cccd_handle    =
-      m_controller_service.controller_io_char_handles.cccd_handle;
+    cp_init.start_on_notify_cccd_handle =
+            m_controller_service.controller_io_char_handles.cccd_handle;
 
     //m_hrs.hrm_handles.cccd_handle;
-    cp_init.disconnect_on_fail             = false;
-    cp_init.evt_handler                    = on_conn_params_evt;
-    cp_init.error_handler                  = conn_params_error_handler;
+    cp_init.disconnect_on_fail = false;
+    cp_init.evt_handler = on_conn_params_evt;
+    cp_init.error_handler = conn_params_error_handler;
 
     err_code = ble_conn_params_init(&cp_init);
     APP_ERROR_CHECK(err_code);
@@ -724,8 +700,7 @@ static void conn_params_init(void)
  *
  * @note This function will not return.
  */
-static void sleep_mode_enter(void)
-{
+static void sleep_mode_enter(void) {
     uint32_t err_code = bsp_indication_set(BSP_INDICATE_IDLE);
 
     APP_ERROR_CHECK(err_code);
@@ -746,12 +721,10 @@ static void sleep_mode_enter(void)
  *
  * @param[in] ble_adv_evt  Advertising event.
  */
-static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
-{
+static void on_adv_evt(ble_adv_evt_t ble_adv_evt) {
     uint32_t err_code;
 
-    switch (ble_adv_evt)
-    {
+    switch (ble_adv_evt) {
         case BLE_ADV_EVT_FAST:
             NRF_LOG_INFO("Fast Adverstising\r\n");
             err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
@@ -772,12 +745,10 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
  *
  * @param[in]   p_ble_evt   Bluetooth stack event.
  */
-static void on_ble_evt(ble_evt_t * p_ble_evt)
-{
+static void on_ble_evt(ble_evt_t *p_ble_evt) {
     uint32_t err_code;
 
-    switch (p_ble_evt->header.evt_id)
-    {
+    switch (p_ble_evt->header.evt_id) {
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected\r\n");
             err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
@@ -811,25 +782,19 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             APP_ERROR_CHECK(err_code);
             break; // BLE_EVT_USER_MEM_REQUEST
 
-        case BLE_GATTS_EVT_RW_AUTHORIZE_REQUEST:
-        {
-            ble_gatts_evt_rw_authorize_request_t  req;
+        case BLE_GATTS_EVT_RW_AUTHORIZE_REQUEST: {
+            ble_gatts_evt_rw_authorize_request_t req;
             ble_gatts_rw_authorize_reply_params_t auth_reply;
 
             req = p_ble_evt->evt.gatts_evt.params.authorize_request;
 
-            if (req.type != BLE_GATTS_AUTHORIZE_TYPE_INVALID)
-            {
-                if ((req.request.write.op == BLE_GATTS_OP_PREP_WRITE_REQ)     ||
+            if (req.type != BLE_GATTS_AUTHORIZE_TYPE_INVALID) {
+                if ((req.request.write.op == BLE_GATTS_OP_PREP_WRITE_REQ) ||
                     (req.request.write.op == BLE_GATTS_OP_EXEC_WRITE_REQ_NOW) ||
-                    (req.request.write.op == BLE_GATTS_OP_EXEC_WRITE_REQ_CANCEL))
-                {
-                    if (req.type == BLE_GATTS_AUTHORIZE_TYPE_WRITE)
-                    {
+                    (req.request.write.op == BLE_GATTS_OP_EXEC_WRITE_REQ_CANCEL)) {
+                    if (req.type == BLE_GATTS_AUTHORIZE_TYPE_WRITE) {
                         auth_reply.type = BLE_GATTS_AUTHORIZE_TYPE_WRITE;
-                    }
-                    else
-                    {
+                    } else {
                         auth_reply.type = BLE_GATTS_AUTHORIZE_TYPE_READ;
                     }
                     auth_reply.params.write.gatt_status = APP_FEATURE_NOT_SUPPORTED;
@@ -838,7 +803,8 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
                     APP_ERROR_CHECK(err_code);
                 }
             }
-        } break; // BLE_GATTS_EVT_RW_AUTHORIZE_REQUEST
+        }
+            break; // BLE_GATTS_EVT_RW_AUTHORIZE_REQUEST
 
 #if (NRF_SD_BLE_API_VERSION == 3)
         case BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST:
@@ -862,8 +828,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
  *
  * @param[in]   p_ble_evt   Bluetooth stack event.
  */
-static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
-{
+static void ble_evt_dispatch(ble_evt_t *p_ble_evt) {
     /** The Connection state module has to be fed BLE events in order to function correctly
      * Remember to call ble_conn_state_on_ble_evt before calling any ble_conns_state_* functions. */
     ble_conn_state_on_ble_evt(p_ble_evt);
@@ -888,8 +853,7 @@ static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
  *
  * @param[in]   sys_evt   System stack event.
  */
-static void sys_evt_dispatch(uint32_t sys_evt)
-{
+static void sys_evt_dispatch(uint32_t sys_evt) {
     // Dispatch the system event to the fstorage module, where it will be
     // dispatched to the Flash Data Storage (FDS) module.
     fs_sys_event_handler(sys_evt);
@@ -910,8 +874,7 @@ static void sys_evt_dispatch(uint32_t sys_evt)
  * @return The returned value is checked in the softdevice_handler module,
  *         using the APP_ERROR_CHECK macro.
  */
-static uint32_t ble_new_event_handler(void)
-{
+static uint32_t ble_new_event_handler(void) {
     BaseType_t yield_req = pdFALSE;
 
     // The returned value may be safely ignored, if error is returned it only means that
@@ -926,8 +889,7 @@ static uint32_t ble_new_event_handler(void)
  *
  * @details Initializes the SoftDevice and the BLE event interrupt.
  */
-static void ble_stack_init(void)
-{
+static void ble_stack_init(void) {
     uint32_t err_code;
 
     nrf_clock_lf_cfg_t clock_lf_cfg = NRF_CLOCK_LFCLKSRC;
@@ -965,12 +927,10 @@ static void ble_stack_init(void)
  *
  * @param[in]   event   Event generated by button press.
  */
-static void bsp_event_handler(bsp_event_t event)
-{
+static void bsp_event_handler(bsp_event_t event) {
     uint32_t err_code;
 
-    switch (event)
-    {
+    switch (event) {
         case BSP_EVENT_SLEEP:
             sleep_mode_enter();
             break;
@@ -978,18 +938,15 @@ static void bsp_event_handler(bsp_event_t event)
         case BSP_EVENT_DISCONNECT:
             err_code = sd_ble_gap_disconnect(m_conn_handle,
                                              BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-            if (err_code != NRF_ERROR_INVALID_STATE)
-            {
+            if (err_code != NRF_ERROR_INVALID_STATE) {
                 APP_ERROR_CHECK(err_code);
             }
             break;
 
         case BSP_EVENT_WHITELIST_OFF:
-            if (m_conn_handle == BLE_CONN_HANDLE_INVALID)
-            {
+            if (m_conn_handle == BLE_CONN_HANDLE_INVALID) {
                 err_code = ble_advertising_restart_without_whitelist();
-                if (err_code != NRF_ERROR_INVALID_STATE)
-                {
+                if (err_code != NRF_ERROR_INVALID_STATE) {
                     APP_ERROR_CHECK(err_code);
                 }
             }
@@ -1006,16 +963,14 @@ static void bsp_event_handler(bsp_event_t event)
  * @param[in] erase_bonds  Indicates whether bonding information should be cleared from
  *                         persistent storage during initialization of the Peer Manager.
  */
-static void peer_manager_init(bool erase_bonds)
-{
+static void peer_manager_init(bool erase_bonds) {
     ble_gap_sec_params_t sec_param;
-    ret_code_t           err_code;
+    ret_code_t err_code;
 
     err_code = pm_init();
     APP_ERROR_CHECK(err_code);
 
-    if (erase_bonds)
-    {
+    if (erase_bonds) {
         err_code = pm_peers_delete();
         APP_ERROR_CHECK(err_code);
     }
@@ -1023,18 +978,18 @@ static void peer_manager_init(bool erase_bonds)
     memset(&sec_param, 0, sizeof(ble_gap_sec_params_t));
 
     // Security parameters to be used for all security procedures.
-    sec_param.bond           = SEC_PARAM_BOND;
-    sec_param.mitm           = SEC_PARAM_MITM;
-    sec_param.lesc           = SEC_PARAM_LESC;
-    sec_param.keypress       = SEC_PARAM_KEYPRESS;
-    sec_param.io_caps        = SEC_PARAM_IO_CAPABILITIES;
-    sec_param.oob            = SEC_PARAM_OOB;
-    sec_param.min_key_size   = SEC_PARAM_MIN_KEY_SIZE;
-    sec_param.max_key_size   = SEC_PARAM_MAX_KEY_SIZE;
-    sec_param.kdist_own.enc  = 1;
-    sec_param.kdist_own.id   = 1;
+    sec_param.bond = SEC_PARAM_BOND;
+    sec_param.mitm = SEC_PARAM_MITM;
+    sec_param.lesc = SEC_PARAM_LESC;
+    sec_param.keypress = SEC_PARAM_KEYPRESS;
+    sec_param.io_caps = SEC_PARAM_IO_CAPABILITIES;
+    sec_param.oob = SEC_PARAM_OOB;
+    sec_param.min_key_size = SEC_PARAM_MIN_KEY_SIZE;
+    sec_param.max_key_size = SEC_PARAM_MAX_KEY_SIZE;
+    sec_param.kdist_own.enc = 1;
+    sec_param.kdist_own.id = 1;
     sec_param.kdist_peer.enc = 1;
-    sec_param.kdist_peer.id  = 1;
+    sec_param.kdist_peer.id = 1;
 
     err_code = pm_sec_params_set(&sec_param);
     APP_ERROR_CHECK(err_code);
@@ -1046,25 +1001,24 @@ static void peer_manager_init(bool erase_bonds)
 
 /**@brief Function for initializing the Advertising functionality.
  */
-static void advertising_init(void)
-{
-    uint32_t               err_code;
-    ble_advdata_t          advdata;
+static void advertising_init(void) {
+    uint32_t err_code;
+    ble_advdata_t advdata;
     ble_adv_modes_config_t options;
 
     // Build and set advertising data
     memset(&advdata, 0, sizeof(advdata));
 
-    advdata.name_type               = BLE_ADVDATA_FULL_NAME;
-    advdata.include_appearance      = true;
-    advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+    advdata.name_type = BLE_ADVDATA_FULL_NAME;
+    advdata.include_appearance = true;
+    advdata.flags = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
     advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-    advdata.uuids_complete.p_uuids  = m_adv_uuids;
+    advdata.uuids_complete.p_uuids = m_adv_uuids;
 
     memset(&options, 0, sizeof(options));
-    options.ble_adv_fast_enabled  = true;
+    options.ble_adv_fast_enabled = true;
     options.ble_adv_fast_interval = APP_ADV_INTERVAL;
-    options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
+    options.ble_adv_fast_timeout = APP_ADV_TIMEOUT_IN_SECONDS;
 
     err_code = ble_advertising_init(&advdata, NULL, &options, on_adv_evt, NULL);
     APP_ERROR_CHECK(err_code);
@@ -1075,10 +1029,8 @@ static void advertising_init(void)
  *
  * @param[out] p_erase_bonds  Will be true if the clear bonding button was pressed to wake the application up.
  */
-static void buttons_leds_init(bool * p_erase_bonds)
-{
+static void buttons_leds_init(bool *p_erase_bonds) {
     bsp_event_t startup_event;
-
 
     uint32_t err_code = bsp_init(BSP_INIT_LED | BSP_INIT_BUTTONS,
                                  APP_TIMER_TICKS(100, APP_TIMER_PRESCALER),
@@ -1089,7 +1041,8 @@ static void buttons_leds_init(bool * p_erase_bonds)
     err_code = bsp_btn_ble_init(NULL, &startup_event);
     APP_ERROR_CHECK(err_code);
 
-    *p_erase_bonds = true; (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
+    *p_erase_bonds = true;
+    (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
 }
 
 
@@ -1100,10 +1053,9 @@ static void buttons_leds_init(bool * p_erase_bonds)
  * @param[in]   arg   Pointer used for passing some arbitrary information (context) from the
  *                    osThreadCreate() call to the thread.
  */
-static void ble_stack_thread(void * arg)
-{
+static void ble_stack_thread(void *arg) {
     uint32_t err_code;
-    bool     erase_bonds;
+    bool erase_bonds;
 
     UNUSED_PARAMETER(arg);
 
@@ -1122,11 +1074,9 @@ static void ble_stack_thread(void * arg)
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
 
-    while (1)
-    {
+    while (1) {
         /* Wait for event from SoftDevice */
-        while (pdFALSE == xSemaphoreTake(m_ble_event_ready, portMAX_DELAY))
-        {
+        while (pdFALSE == xSemaphoreTake(m_ble_event_ready, portMAX_DELAY)) {
             // Just wait again in the case when INCLUDE_vTaskSuspend is not enabled
         }
 
@@ -1140,10 +1090,8 @@ static void ble_stack_thread(void * arg)
 
 /**@brief Function for starting advertising.
  */
-static void advertising_start(void)
-{
+static void advertising_start(void) {
     uint32_t err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
-
     APP_ERROR_CHECK(err_code);
 }
 
@@ -1156,14 +1104,10 @@ static void advertising_start(void)
  * @param[in]   arg   Pointer used for passing some arbitrary information (context) from the
  *                    osThreadCreate() call to the thread.
  */
-static void logger_thread(void * arg)
-{
+static void logger_thread(void * arg) {
     UNUSED_PARAMETER(arg);
-
-    while(1)
-    {
+    while(1) {
         NRF_LOG_FLUSH();
-
         vTaskSuspend(NULL); // Suspend myself
     }
 }
@@ -1172,13 +1116,11 @@ static void logger_thread(void * arg)
 /**@brief A function which is hooked to idle task.
  * @note Idle hook must be enabled in FreeRTOS configuration (configUSE_IDLE_HOOK).
  */
-void vApplicationIdleHook( void )
-{
-     vTaskResume(m_logger_thread);
+void vApplicationIdleHook(void) {
+    vTaskResume(m_logger_thread);
 }
 
-static void sensor_thread(void * arg)
-{
+static void sensor_thread(void *arg) {
     UNUSED_PARAMETER(arg);
     ret_code_t err_code;
 
@@ -1193,33 +1135,31 @@ static void sensor_thread(void * arg)
 
     setup_button_pin(BUTTON_LEFT);
 
-    while(1) {
+    while (1) {
         uint8_t button_press;
         //LEDS_INVERT(1 << LED_1);
         if (xQueueReceive(
-          m_button_queue,
-          &button_press,
-          2000 / portTICK_RATE_MS) == pdPASS) {
-          if (ble_controller_send_click(
-            &m_controller_service,
-            button_press) == BLE_ERROR_GATTS_SYS_ATTR_MISSING ) {
-            nrf_drv_gpiote_out_toggle(PIN_OUT);
-          }
-        }
-        else {
-          ble_controller_send_click(
-            &m_controller_service,
-            BUTTON_NO_PRESS_BF);
+                m_button_queue,
+                &button_press,
+                2000 / portTICK_RATE_MS) == pdPASS) {
+            if (ble_controller_send_click(
+                    &m_controller_service,
+                    button_press) == BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
+                nrf_drv_gpiote_out_toggle(PIN_OUT);
+            }
+        } else {
+            ble_controller_send_click(
+                    &m_controller_service,
+                    BUTTON_NO_PRESS_BF);
         }
 
-        // //vTaskDelay(TASK_DELAY);
+        // //vTaskDelay(uwe_sense_task_delay);
     }
 }
 
 /**@brief Function for application main entry.
  */
-int main(void)
-{
+int main(void) {
     ret_code_t err_code;
     err_code = nrf_drv_clock_init();
     APP_ERROR_CHECK(err_code);
@@ -1229,8 +1169,7 @@ int main(void)
 
     // Init a semaphore for the BLE thread.
     m_ble_event_ready = xSemaphoreCreateBinary();
-    if (NULL == m_ble_event_ready)
-    {
+    if (NULL == m_ble_event_ready) {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
@@ -1238,26 +1177,22 @@ int main(void)
     APP_ERROR_CHECK(err_code);
 
     // Start execution.
-    if (pdPASS != xTaskCreate(ble_stack_thread, "BLE", 256, NULL, 2, &m_ble_stack_thread))
-    {
+    if (pdPASS != xTaskCreate(ble_stack_thread, "BLE", 256, NULL, 2, &m_ble_stack_thread)) {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
     // Start Sensor task.
     m_button_queue = xQueueCreate(BUTTON_QUEUE_SIZE, sizeof(uint8_t));
-    if (NULL == m_button_queue)
-    {
-      APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
+    if (NULL == m_button_queue) {
+        APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
-    if(pdPASS != xTaskCreate(sensor_thread, "UWE_Sense", 256, NULL, 1, &m_sensor_thread))
-    {
+    if (pdPASS != xTaskCreate(sensor_thread, "UWE_Sense", 256, NULL, 1, &m_sensor_thread)) {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 
 #if NRF_LOG_ENABLED
     // Start execution.
-    if (pdPASS != xTaskCreate(logger_thread, "LOGGER", 256, NULL, 1, &m_logger_thread))
-    {
+    if (pdPASS != xTaskCreate(logger_thread, "LOGGER", 256, NULL, 1, &m_logger_thread)) {
         APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
     }
 #endif //NRF_LOG_ENABLED
@@ -1268,8 +1203,7 @@ int main(void)
     // Start FreeRTOS scheduler.
     vTaskStartScheduler();
 
-    while (true)
-    {
+    while (true) {
         APP_ERROR_HANDLER(NRF_ERROR_FORBIDDEN);
     }
 }

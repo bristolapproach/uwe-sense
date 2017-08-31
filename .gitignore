@@ -1,6 +1,10 @@
+.idea/
 *.o
 *.hex
 *.out
 *.gch
+*.js
+package-lock.json
+hrs_s132
 node_modules
-typings
+platforms

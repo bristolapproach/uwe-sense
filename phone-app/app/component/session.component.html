@@ -1,0 +1,16 @@
+<ActionBar title="Bristol Sense" class="action-bar"></ActionBar>
+<ScrollView>
+    <StackLayout class="page" orientation="vertical">
+        <Image src="res://logo" width="75%" horizontalAlignment="center"></Image>
+        <Label text="Bristol Sense Manager" class="title"></Label>
+        <Button text="Start Session" (tap)="startSession($event)"></Button>
+        <Button class="{{ locationEnabled ? 'none' : 'special' }}"
+                text="{{ locationEnabled ? 'Location Enabled' : 'Location Disabled' }}"
+                (tap)="toggleLocationTracking($event)"></Button>
+        <Button text="About" (tap)="goAbout($event)"></Button>
+        <Button class="{{ loggingOut ? 'special' : 'none' }}"
+                text="{{ loggingOut ? 'Logging Out \u27f2' : 'Logout' }}"
+                (tap)="logout($event)"
+                isEnabled="{{ !loggingOut }}"></Button>
+    </StackLayout>
+</ScrollView>

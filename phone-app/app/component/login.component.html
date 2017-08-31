@@ -1,0 +1,12 @@
+<ActionBar title="Bristol Sense" class="action-bar"></ActionBar>
+<ScrollView>
+    <StackLayout class="page" orientation="vertical">
+        <Image src="res://logo" width="75%" horizontalAlignment="center"></Image>
+        <Label text="Bristol Sense Login" class="title"></Label>
+        <Button class="{{ loggingIn ? 'special' : 'none' }}"
+                text="{{ loggingIn ? loginStatus : 'Login' }}"
+                (tap)="login($event)"
+                ng-init="count=0"
+                isEnabled="{{ !loggingIn }}"></Button>
+    </StackLayout>
+</ScrollView>

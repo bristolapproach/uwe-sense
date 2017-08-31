@@ -1,0 +1,81 @@
+/*
+In NativeScript, the app.css file is where you place CSS rules that
+you would like to apply to your entire application. Check out
+http://docs.nativescript.org/ui/styling for a full list of the CSS
+selectors and properties you can use to style UI components.
+
+/*
+In many cases you may want to use the NativeScript core theme instead
+of writing your own CSS rules. For a full list of class names in the theme
+refer to http://docs.nativescript.org/ui/theme.
+*/
+@import 'nativescript-theme-core/css/sky.css';
+
+StackLayout {
+    background-color: white;
+    font-size: 16px;
+}
+
+TextField {
+    margin: 10px;
+    padding: 10px;
+}
+
+Image {
+    margin: 20px 0 80px;
+}
+
+Button {
+    border-radius: 2px;
+    background-color: skyblue;
+    color: white;
+    max-width: 720px;
+    width: 80%;
+    margin: 10px;
+    padding: 10px;
+
+}
+
+.link {
+    background-color: transparent;
+    border: 2px black;
+}
+
+Label {
+    text-align: center;
+}
+
+Label.title {
+    font-size: 32px;
+}
+
+Label.subtitle {
+    font-size: 24px;
+}
+
+Button {
+    color: white;
+    background-color: #009fe3;
+}
+
+Button.special {
+    color: white;
+    background-color: #d4412f;
+}
+
+Button.dull {
+    color: black;
+    background-color: #deecef;
+}
+
+ListPicker {
+    width: 30%;
+    max-width: 300px;
+    min-width: 100px;
+}
+
+Button.back {
+    color: black;
+    background-color: white;
+    margin-left: 0px;
+}

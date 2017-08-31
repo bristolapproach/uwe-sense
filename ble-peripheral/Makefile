@@ -5,6 +5,8 @@ export OUTPUT_FILENAME
 MAKEFILE_NAME := $(MAKEFILE_LIST)
 MAKEFILE_DIR := $(dir $(MAKEFILE_NAME) )
 
+#NRFJPROG := $(NORDIC_SDK_ROOT)../nrfjprog/nrfjprog
+NRFJPROG := nrfjprog
 LINKER_SCRIPT=ble_app_hrs_freertos_gcc_nrf52.ld
 TEMPLATE_PATH = $(NORDIC_SDK_ROOT)/components/toolchain/gcc
 ifeq ($(OS),Windows_NT)
@@ -37,7 +39,7 @@ SIZE            := '$(GNU_INSTALL_ROOT)/bin/$(GNU_PREFIX)-size'
 remduplicates = $(strip $(if $1,$(firstword $1) $(call remduplicates,$(filter-out $(firstword $1),$1))))
 
 # PATHs for mergehex and softdevice
-MERGEHEX = $(NORDIC_SDK_ROOT)/../bin/mergehex
+MERGEHEX = /usr/bin/mergehex
 S132_SOFTDEVICE = $(NORDIC_SDK_ROOT)/components/softdevice/s132/hex/s132_nrf52_3.0.0_softdevice.hex
 
 # Path for MK20 mount for MBED install, Red Bear Nano setup
@@ -236,7 +238,7 @@ CFLAGS += -D__STACK_SIZE=2048
 CFLAGS += -DNRF52
 CFLAGS += -DNRF52_PAN_64
 CFLAGS += -DSOFTDEVICE_PRESENT
-CFLAGS += -DBOARD_UWE_SENSE
+CFLAGS += -DBOARD_CUSTOM
 CFLAGS += -DNRF52832
 CFLAGS += -D__HEAP_SIZE=1024
 CFLAGS += -DNRF52_PAN_12
@@ -387,11 +389,11 @@ cleanobj:
 
 flash: hrs_s132
 	@echo Flashing: $(OUTPUT_BINARY_DIRECTORY)/$<.hex
-	$(NORDIC_SDK_ROOT)../nrfjprog/nrfjprog --program $(OUTPUT_BINARY_DIRECTORY)/$<.hex -f nrf52  --sectorerase
-	$(NORDIC_SDK_ROOT)../nrfjprog/nrfjprog --reset -f nrf52
+	$(NRFJPROG) --program $(OUTPUT_BINARY_DIRECTORY)/$<.hex -f nrf52  --sectorerase
+	$(NRFJPROG) --reset -f nrf52
 
 ## Flash softdevice
 flash_softdevice:
 	@echo Flashing: s132_nrf52_3.0.0_softdevice.hex
-	$(NORDIC_SDK_ROOT)../nrfjprog/nrfjprog --program $(S132_SOFTDEVICE) -f nrf52 --chiperase
-	$(NORDIC_SDK_ROOT)../nrfjprog/nrfjprog --reset -f nrf52
+	$(NRFJPROG) --program $(S132_SOFTDEVICE) -f nrf52 --chiperase
+	$(NRFJPROG) --reset -f nrf52

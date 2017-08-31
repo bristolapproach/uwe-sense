@@ -1,0 +1,29 @@
+<ActionBar title="Bristol Sense" class="action-bar"></ActionBar>
+<ScrollView>
+    <StackLayout class="page" orientation="vertical">
+        <Image src="res://logo" width="75%" horizontalAlignment="center"></Image>
+        <Label text="Bristol Sense Manager" class="title"></Label>
+        <Button text="Quit Session" (tap)="quitSession($event)"></Button>
+        <Button text="Add Note" (tap)="addNote($event)"></Button>
+        <Button class="{{scanning ? 'special' : 'none'}}"
+                text="{{scanning ? scanningText : 'Scan for devices'}}"
+                (tap)="scan($event)"
+                isEnabled="{{!scanning}}"></Button>
+
+        <Label text="Connected Devices" class="subtitle"></Label>
+        <Button class='dull' *ngFor="let peripheral of connectedPeripherals"
+                (tap)="configure(peripheral)"
+                [text]="''+peripheral.name+' \t\t \uD83D\uDD0B'+peripheral.battery+'%'"></Button>
+
+        <Label text="Disconnected Devices" class="subtitle"></Label>
+        <Button *ngFor="let peripheral of disconnectedKnownPeripherals"
+                class="{{peripheral.connecting ? 'special' : 'dull'}}"
+                text="{{peripheral.connecting ? (peripheral.name + ' \t\t Connecting...') : (peripheral.name + ' (known) \uD83D\uDD0B' + peripheral.battery + '%')}}"
+                (tap)="connect(peripheral, true)"
+                (longPress)="configure(peripheral)"></Button>
+        <Button *ngFor="let peripheral of disconnectedPeripherals"
+                class="{{peripheral.connecting ? 'special' : 'dull'}}"
+                text="{{peripheral.connecting ? (peripheral.name + ' \t\t Connecting...') : (peripheral.name + ' \uD83D\uDD0B' + peripheral.battery + '%')}}"
+                (tap)="connect(peripheral, true)"></Button>
+    </StackLayout>
+</ScrollView>

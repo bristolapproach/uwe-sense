@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "651040580160",
+    "firebase_url": "https://bristol-sense.firebaseio.com",
+    "project_id": "bristol-sense",
+    "storage_bucket": "bristol-sense.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:651040580160:android:1c8045d0fb999d1c",
+        "android_client_info": {
+          "package_name": "org.nativescript.angular"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "651040580160-o1esoo2vglp32tangn24ovaruei00qcq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBU_XolLQlzi1T_ShMZ1mve0fN3p_MdilM"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
