@@ -226,13 +226,15 @@ export class ConnectComponent implements OnInit {
         peripheral.connecting = false;
         this.connectingIds.delete(peripheral.UUID);
 
-        deletePeripheral(this.connectedPeripherals, peripheral.UUID);
-        addPeripheral(this.disconnectedKnownPeripherals, peripheral);
+        let wasConnected: boolean = deletePeripheral(this.connectedPeripherals, peripheral.UUID);
+
+        if (wasConnected) {
+            addPeripheral(this.disconnectedKnownPeripherals, peripheral);
+            alert("Disconnected from " + peripheral.name);
+        }
 
         this.zone.run(() => {
         }); // Force page refresh, for some reason it doesn't naturally update here.
-
-        alert("Disconnected from " + peripheral.name);
     }
 
     public subscribe(peripheral: UWEPeripheral): void {

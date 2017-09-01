@@ -6,12 +6,15 @@ export function addPeripheral(peripherals: UWEPeripheral[], peripheral: UWEPerip
     peripherals.push(peripheral);
 }
 
-export function deletePeripheral(peripherals: UWEPeripheral[], peripheralId: string): void {
+export function deletePeripheral(peripherals: UWEPeripheral[], peripheralId: string): boolean {
+    let target: boolean = false;
     for (let i = 0; i < peripherals.length; i++) {
         if (peripherals[i].UUID == peripheralId) {
             peripherals.splice(i, 1);
+            target = true;
         }
     }
+    return target;
 }
 
 export function findPeripheral(peripherals: UWEPeripheral[], peripheralId: string): UWEPeripheral {
