@@ -21,13 +21,13 @@ export class NoteComponent implements OnInit {
     }
 
     public submit(): void {
-        const info: Note = {
+        const note: Note = {
             session: this.api.getCurrentSession(),
             text: this.note,
             timestamp: new Date()
         };
 
-        this.api.submitNote(info).then(() => {
+        this.api.submitNote(note).then(() => {
             this.routerExtensions.back();
             alert("Note successfully created!");
         }, error => {
