@@ -46,7 +46,14 @@ export class ApiService {
             url: this.authenticateUrl,
             content: token
         }).then(response => {
+            const message = "(" + response.statusCode + ") " + response.content.toString();
             this.authorisationJwt = response.content.toString();
+
+            if (response.statusCode < 400) {
+                return Promise.resolve(message);
+            }
+
+            return Promise.reject(message);
         });
     }
 
@@ -64,7 +71,7 @@ export class ApiService {
             headers: headers,
             content: JSON.stringify(data)
         }).then(response => {
-            const message = "(" + response.statusCode + ")" + response.content.toString();
+            const message = "(" + response.statusCode + ") " + response.content.toString();
             console.log("Device creation response: " + message);
 
             if (response.statusCode == 401) {
@@ -96,7 +103,7 @@ export class ApiService {
                 content: JSON.stringify(data)
             });
         }).then(response => {
-            const message = "(" + response.statusCode + ")" + response.content.toString();
+            const message = "(" + response.statusCode + ") " + response.content.toString();
             console.log("Reading submission response: " + message);
 
             if (response.statusCode == 401) {
@@ -128,7 +135,7 @@ export class ApiService {
                 content: JSON.stringify(data)
             });
         }).then(response => {
-            const message = "(" + response.statusCode + ")" + response.content.toString();
+            const message = "(" + response.statusCode + ") " + response.content.toString();
             console.log("Note submission response: " + response.content.toString());
 
             if (response.statusCode == 401) {
