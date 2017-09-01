@@ -12,6 +12,8 @@ export class ApiService {
     private authenticateUrl: string = this.baseUrl + "/citizen-sensing/authenticate-user-jwt?provider=firebase";
     private dataPublishingUrl: string = this.baseUrl + "/citizen-sensing/device-data-publishing";
     private createDeviceUrl: string = this.baseUrl + "/citizen-sensing/register-device-with-hardware-id";
+    // TODO: Currently a dummy endpoint.
+    private unregisterDeviceUrl: string = this.baseUrl + "/citizen-sensing/unregister-device-with-hardware-id";
     private authorisationJwt: string = "";
     private token: string = "";
     private locationEnabled: boolean = false;
@@ -180,7 +182,7 @@ export class ApiService {
 
         return http.request({
             method: "POST",
-            url: this.createDeviceUrl,
+            url: this.unregisterDeviceUrl,
             headers: headers,
             content: JSON.stringify(data)
         }).then(response => {
