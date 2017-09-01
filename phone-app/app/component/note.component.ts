@@ -27,9 +27,12 @@ export class NoteComponent implements OnInit {
             timestamp: new Date()
         };
 
-        this.api.submitNote(info);
-        this.routerExtensions.back();
-        alert("Note successfully created!");
+        this.api.submitNote(info).then(() => {
+            this.routerExtensions.back();
+            alert("Note successfully created!");
+        }, error => {
+            alert("Note creation failed:\n\n" + error);
+        });
     }
 
     public back(): void {
