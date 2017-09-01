@@ -1,7 +1,7 @@
 import {Injectable} from "@angular/core";
 import "rxjs/add/operator/map";
 import {enableLocationRequest, getCurrentLocation, isEnabled} from "nativescript-geolocation";
-import {CreateDevice, LocationData, Note, SensorReading} from "./interfaces";
+import {CreateDevice, LocationData, Note, SensorReading, UnregisterDevice, UWEPeripheral} from "./interfaces";
 
 const http = require("http");
 
@@ -167,6 +167,37 @@ export class ApiService {
 
         getCurrentLocation({}).then(location => {
             data.location = location;
+        });
+    }
+
+    public unregisterDevice(data: UnregisterDevice): Promise<string> {
+        const headers = {
+            "Authorization": "Bearer " + this.authorisationJwt,
+            "Content-Type": "application/json"
+        };
+
+        console.log("Sending unregister device: " + JSON.stringify(data));
+
+        return http.request({
+            method: "POST",
+            url: this.createDeviceUrl,
+            headers: headers,
+            content: JSON.stringify(data)
+        }).then(response => {
+            const message = "(" + response.statusCode + ") " + response.content.toString();
+            console.log("Device unregister response: " + message);
+
+            if (response.statusCode == 401) {
+                return this.authenticate(this.token).then(() => {
+                    return this.unregisterDevice(data);
+                });
+            }
+
+            if (response.statusCode < 400) {
+                return Promise.resolve(message);
+            }
+
+            return Promise.reject(message);
         });
     }
 }

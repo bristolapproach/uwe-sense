@@ -24,6 +24,11 @@ export interface Note extends LocationData {
     timestamp: Date;
 }
 
+export interface UnregisterDevice {
+    deviceId: string;
+    purgeData: boolean;
+}
+
 export interface UWEPeripheral extends Peripheral {
     battery?: number;
     connecting?: boolean;

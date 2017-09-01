@@ -8,8 +8,9 @@ import {RouterExtensions} from "nativescript-angular";
 import {ListPicker} from "tns-core-modules/ui/list-picker";
 import {DEFAULT_RESAMPLE_RATE, NOTIFY_CHARACTERISTICS, SENSOR_SERVICE_ID} from "../configuration";
 import {findPeripheral, getCharacteristic, getUWESenseService} from "../util";
-import {UWECharacteristic, UWEPeripheral, UWEService} from "../interfaces";
+import {UnregisterDevice, UWECharacteristic, UWEPeripheral, UWEService} from "../interfaces";
 import {File} from "tns-core-modules/file-system";
+import {ApiService} from "../app.service";
 
 @Component({
     selector: "ns-items",
@@ -33,7 +34,8 @@ export class PeripheralComponent implements OnInit {
     private zeroToTwentyFour = Array(24).fill(1, 25).map((x, i) => i);
 
     constructor(private routerExtensions: RouterExtensions,
-                private route: ActivatedRoute) {
+                private route: ActivatedRoute,
+                private api: ApiService) {
         this.peripheralId = route.snapshot.params["peripheralId"];
     }
 
@@ -111,15 +113,22 @@ export class PeripheralComponent implements OnInit {
     unregister(): void {
         dialogs.confirm({
             title: "Unregister " + this.peripheral.name,
-            message: "Are you sure you wish to unregister this device?",
+            message: "Deleting device, would you like to purge its history?",
             okButtonText: "Yes",
             cancelButtonText: "No",
             neutralButtonText: "Cancel"
         }).then(response => {
-            if (!response) {
-                return;
+            if (response === undefined) {
+                return Promise.reject(false);
             }
 
+            const unregisterDevicePacket: UnregisterDevice = {
+                deviceId: this.peripheralId,
+                purgeData: response
+            };
+
+            return this.api.unregisterDevice(unregisterDevicePacket);
+        }).then(() => {
             for (let i = 0; i < this.knownPeripherals.length; i++) {
                 if (this.knownPeripherals[i].UUID == this.peripheral.UUID) {
                     this.knownPeripherals.splice(i, 1);
@@ -127,16 +136,18 @@ export class PeripheralComponent implements OnInit {
             }
 
             const serializedPeripherals = JSON.stringify(Array.from(this.knownPeripherals));
-            console.log("WRITING: " + serializedPeripherals);
-            this.knownPeripheralsFile.writeText(serializedPeripherals).then(value => {
-                console.log("WRITE SUCCESS: " + value);
-            });
-
+            return this.knownPeripheralsFile.writeText(serializedPeripherals);
+        }).then(() => {
             bluetooth.disconnect({UUID: this.peripheral.UUID});
+            return dialogs.alert("Device successfully unregistered");
+        }).then(() => {
+            this.routerExtensions.back();
+        }, error => {
+            if (!error) {
+                return;
+            }
 
-            dialogs.alert("Device successfully unregistered").then(() => {
-                this.routerExtensions.back();
-            });
+            alert("Device deletion failed: " + error);
         });
     }
 

@@ -76,6 +76,7 @@ export class LoginComponent implements OnInit {
 
             // Alert the user if an error occurred.
             this.loggingIn = false;
+            console.log(new Date() + ": Failed to login - " + error);
             alert("Failed to login:\n\n" + error);
 
         });
