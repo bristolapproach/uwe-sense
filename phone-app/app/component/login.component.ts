@@ -2,6 +2,10 @@ import {Component, OnInit} from "@angular/core";
 import {TextDecoder} from "text-encoding";
 import {ApiService} from "../app.service";
 import {RouterExtensions} from "nativescript-angular";
+import {confirm} from "ui/dialogs";
+import {license} from "../license";
+import {exit} from "nativescript-exit";
+import * as fs from "tns-core-modules/file-system";
 import firebase = require("nativescript-plugin-firebase");
 
 @Component({
@@ -21,6 +25,27 @@ export class LoginComponent implements OnInit {
     }
 
     public ngOnInit(): void {
+        const app = fs.knownFolders.currentApp();
+        const path = fs.path.join(app.path, ".eula");
+
+        if (fs.File.exists(path)) {
+            return;
+        }
+
+        confirm({
+            title: "License Agreement",
+            message: license,
+            okButtonText: "Accept",
+            cancelButtonText: "Deny",
+            neutralButtonText: "Cancel"
+        }).then(function (result) {
+            if (!result) {
+                exit();
+                return;
+            }
+
+            app.getFile(".eula");
+        });
     }
 
     public goAbout(): void {
