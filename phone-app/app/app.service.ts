@@ -167,7 +167,7 @@ export class ApiService {
             });
         }
 
-        getCurrentLocation({}).then(location => {
+        return getCurrentLocation({}).then(location => {
             data.location = location;
         });
     }
