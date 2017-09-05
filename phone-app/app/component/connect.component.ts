@@ -54,6 +54,7 @@ export class ConnectComponent implements OnInit {
 
             for (let i = 0; i < this.disconnectedKnownPeripherals.length; i++) {
                 const peripheral = this.disconnectedKnownPeripherals[i];
+                if (!peripheral.services) continue;
 
                 if (findPeripheral(this.connectedPeripherals, peripheral.UUID)) {
                     deletePeripheral(this.disconnectedKnownPeripherals, peripheral.UUID);
