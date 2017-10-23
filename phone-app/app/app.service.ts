@@ -8,7 +8,7 @@ const http = require("http");
 @Injectable()
 export class ApiService {
 
-    private baseUrl: string = "http://ec2-35-166-177-195.us-west-2.compute.amazonaws.com:8080";
+    private baseUrl: string = "https://api.dataunity.org";
     private authenticateUrl: string = this.baseUrl + "/citizen-sensing/authenticate-user-jwt?provider=firebase";
     private dataPublishingUrl: string = this.baseUrl + "/citizen-sensing/device-data-publishing";
     private createDeviceUrl: string = this.baseUrl + "/citizen-sensing/register-device-with-hardware-id";
