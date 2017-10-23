@@ -79,6 +79,7 @@ export class LoginComponent implements OnInit {
             this.account = account;
             return firebase.getAuthToken({forceRefresh: true});
 
+        }, () => {
         }).then((token: string) => {
 
             // Authenticate with DataUnity using the token.
