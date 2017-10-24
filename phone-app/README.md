@@ -13,6 +13,10 @@ Phone application for the UWE Sense project.
 
 `tns build android`
 
+#### Apply patches
+
+`./applyPatches.sh`
+
 #### Run
 
 `tns run android`
