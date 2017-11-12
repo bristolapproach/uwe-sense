@@ -4,6 +4,7 @@
 *.out
 *.gch
 *.js
+!phone-app/patches/https.android.js
 package-lock.json
 hrs_s132
 node_modules
