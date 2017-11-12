@@ -11,6 +11,7 @@ import {NativeScriptRouterModule} from "nativescript-angular";
 import {AboutComponent} from "./component/about.component";
 import {SessionComponent} from "./component/session.component";
 import {NoteComponent} from "./component/note.component";
+import {DataUnityComponent} from "./component/dataunity.component";
 
 @NgModule({
     bootstrap: [
@@ -30,7 +31,8 @@ import {NoteComponent} from "./component/note.component";
         AboutComponent,
         ConnectComponent,
         NoteComponent,
-        PeripheralComponent
+        PeripheralComponent,
+        DataUnityComponent
     ],
     providers: [
         ApiService

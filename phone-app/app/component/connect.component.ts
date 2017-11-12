@@ -77,6 +77,10 @@ export class ConnectComponent implements OnInit {
         this.routerExtensions.navigate(["/session"], {clearHistory: true});
     }
 
+    public viewDataUnity(): void {
+        this.routerExtensions.navigate(["/dataunity"], {clearHistory: false});
+    }
+
     public addNote(): void {
         this.routerExtensions.navigate(["/note"], {clearHistory: false});
     }

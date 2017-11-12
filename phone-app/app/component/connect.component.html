@@ -6,6 +6,7 @@
         <Label class="subtitle"
                text="{{'Sensing Status: ' + (connectedPeripherals.length == 0 ? 'Inactive \u2716' : 'Active \u2714')}}"></Label>
         <Button text="Quit Session" (tap)="quitSession($event)"></Button>
+        <Button text="View Data" (tap)="viewDataUnity($event)"></Button>
         <!--<Button text="Add Note" (tap)="addNote($event)"></Button>-->
         <Button class="{{scanning ? 'special' : 'none'}}"
                 text="{{scanning ? scanningText : 'Scan for devices'}}"

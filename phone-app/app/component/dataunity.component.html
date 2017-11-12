@@ -1,0 +1,7 @@
+<ActionBar title="Bristol Sense" class="action-bar"></ActionBar>
+<ScrollView>
+    <StackLayout class="page" orientation="vertical">
+        <WebView id="webView" src="https://api.dataunity.org" [height]="height"></WebView>
+        <Button text="Back" (tap)="back($event)"></Button>
+    </StackLayout>
+</ScrollView>
