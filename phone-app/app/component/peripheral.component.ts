@@ -121,13 +121,14 @@ export class PeripheralComponent implements OnInit {
             if (response === undefined) {
                 return Promise.reject(false);
             }
+            return Promise.resolve();
 
-            const unregisterDevicePacket: UnregisterDevice = {
-                deviceId: this.peripheralId,
-                purgeData: response
-            };
-
-            return this.api.unregisterDevice(unregisterDevicePacket);
+            // const unregisterDevicePacket: UnregisterDevice = {
+            //     deviceId: this.peripheralId,
+            //     purgeData: response
+            // };
+            //
+            // return this.api.unregisterDevice(unregisterDevicePacket);
         }).then(() => {
             for (let i = 0; i < this.knownPeripherals.length; i++) {
                 if (this.knownPeripherals[i].UUID == this.peripheral.UUID) {
