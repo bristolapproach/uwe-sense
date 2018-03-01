@@ -16,17 +16,17 @@
         <Label text="Connected Devices" class="subtitle"></Label>
         <Button class='dull' *ngFor="let peripheral of connectedPeripherals"
                 (tap)="configure(peripheral)"
-                [text]="peripheral.name + (peripheral.battery === undefined ? '' : '\t\t \uD83D\uDD0B' + peripheral.battery + '%')"></Button>
+                [text]="peripheral.UUID + (peripheral.battery === undefined ? '' : '\t\t \uD83D\uDD0B' + peripheral.battery + '%')"></Button>
 
         <Label text="Disconnected Devices" class="subtitle"></Label>
         <Button *ngFor="let peripheral of disconnectedKnownPeripherals"
                 class="{{peripheral.connecting ? 'special' : 'dull'}}"
-                text="{{peripheral.name + '\t\t' + (peripheral.connecting ? 'Connecting...' : '(known)')}}"
+                text="{{peripheral.UUID + '\t\t' + (peripheral.connecting ? 'Connecting...' : '(known)')}}"
                 (tap)="connect(peripheral, true)"
                 (longPress)="configure(peripheral)"></Button>
         <Button *ngFor="let peripheral of disconnectedPeripherals"
                 class="{{peripheral.connecting ? 'special' : 'dull'}}"
-                text="{{peripheral.name + (peripheral.connecting ? '\t\tConnecting...' : '')}}"
+                text="{{peripheral.UUID + (peripheral.connecting ? '\t\tConnecting...' : '')}}"
                 (tap)="connect(peripheral, true)"></Button>
     </StackLayout>
 </ScrollView>

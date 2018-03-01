@@ -268,7 +268,7 @@ export class ConnectComponent implements OnInit {
     }
 
     public onNotify(peripheral: UWEPeripheral, typeId: string, result: ReadResult): void {
-        const value: number = new TextDecoder("UTF-8").decode(result.value);
+        const value: number = parseFloat(new TextDecoder("UTF-8").decode(result.value));
         console.log("Received data for " + typeId + ": " + value);
 
         const reading: SensorReading = {
