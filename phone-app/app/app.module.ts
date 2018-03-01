@@ -12,6 +12,7 @@ import {AboutComponent} from "./component/about.component";
 import {SessionComponent} from "./component/session.component";
 import {NoteComponent} from "./component/note.component";
 import {DataUnityComponent} from "./component/dataunity.component";
+import {JournalComponent} from "./component/journal.component";
 
 @NgModule({
     bootstrap: [
@@ -32,7 +33,8 @@ import {DataUnityComponent} from "./component/dataunity.component";
         ConnectComponent,
         NoteComponent,
         PeripheralComponent,
-        DataUnityComponent
+        DataUnityComponent,
+        JournalComponent
     ],
     providers: [
         ApiService

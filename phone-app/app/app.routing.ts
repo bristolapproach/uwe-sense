@@ -9,6 +9,7 @@ import {AboutComponent} from "./component/about.component";
 import {SessionComponent} from "./component/session.component";
 import {NoteComponent} from "./component/note.component";
 import {DataUnityComponent} from "./component/dataunity.component";
+import {JournalComponent} from "./component/journal.component";
 
 export const routes: Routes = [
     {path: "", redirectTo: "/login", pathMatch: "full"},
@@ -18,7 +19,8 @@ export const routes: Routes = [
     {path: "connect", component: ConnectComponent},
     {path: "note", component: NoteComponent},
     {path: "peripheral", component: PeripheralComponent},
-    {path: "dataunity", component: DataUnityComponent}
+    {path: "dataunity", component: DataUnityComponent},
+    {path: "journal", component: JournalComponent}
 ];
 
 @NgModule({

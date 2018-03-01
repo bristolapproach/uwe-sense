@@ -42,6 +42,10 @@ export class SessionComponent implements OnInit {
         }
     }
 
+    goJournal(): void {
+        this.routerExtensions.navigate(["/journal"]);
+    }
+
     goAbout(): void {
         const params = {page: "/session"};
         this.routerExtensions.navigate(["/about", params], {clearHistory: true});
