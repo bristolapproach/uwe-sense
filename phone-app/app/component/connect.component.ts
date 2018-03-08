@@ -268,8 +268,16 @@ export class ConnectComponent implements OnInit {
     }
 
     public onNotify(peripheral: UWEPeripheral, typeId: string, result: ReadResult): void {
-        const value: number = parseFloat(new TextDecoder("UTF-8").decode(result.value));
-        console.log("Received data for " + typeId + ": " + value);
+        const length = new Uint8Array(result.value)[2];
+        const payload = new Uint8ClampedArray(result.value, 3, length);
+        let value: number = 0;
+
+        for (let i = 0; i < length; i++) {
+            value <<= 8;
+            value += payload[i];
+        }
+
+        console.log("Received data for " + typeId + " : " + value);
 
         const reading: SensorReading = {
             session: this.api.getCurrentSession(),
