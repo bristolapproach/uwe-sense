@@ -7,7 +7,7 @@ import * as https from "nativescript-https";
 @Injectable()
 export class ApiService {
 
-    private baseUrl: string = "https://api.dataunity.org";
+    private baseUrl: string = "https://citizensensing.dataunity.org";
     private authenticateUrl: string = this.baseUrl + "/citizen-sensing/authenticate-user-jwt?provider=firebase";
     private dataPublishingUrl: string = this.baseUrl + "/citizen-sensing/device-data-publishing";
     private createDeviceUrl: string = this.baseUrl + "/citizen-sensing/register-device-with-hardware-id";
