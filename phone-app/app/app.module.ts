@@ -19,7 +19,6 @@ import {JournalComponent} from "./component/journal.component";
         AppComponent
     ],
     imports: [
-        NativeScriptModule,
         AppRoutingModule,
         NativeScriptModule,
         NativeScriptRouterModule,
