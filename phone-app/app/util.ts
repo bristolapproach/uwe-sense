@@ -30,7 +30,7 @@ export function getUWESenseService(peripheral: UWEPeripheral): UWEService {
     for (let i = 0; i < peripheral.services.length; i++) {
         const service = peripheral.services[i];
 
-        if (service.UUID == SENSOR_SERVICE_ID) {
+        if (service.UUID == SENSOR_SERVICE_ID || service.UUID == "A80B") {
             return service;
         }
     }
