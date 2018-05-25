@@ -32,6 +32,7 @@ export interface UnregisterDevice {
 export interface UWEPeripheral extends Peripheral {
     battery?: number;
     connecting?: boolean;
+    tasks?: number[];
     services: UWEService[];
 }
 

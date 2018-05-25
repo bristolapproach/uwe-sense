@@ -7,7 +7,8 @@ import {
     requestCoarseLocationPermission,
     startNotifying,
     startScanning,
-    write
+    write,
+    read
 } from "nativescript-bluetooth";
 import {TextDecoder} from "text-encoding";
 import {RouterExtensions} from "nativescript-angular";
@@ -20,7 +21,8 @@ import {
     SENSOR_SERVICE_ID
 } from "../configuration";
 import {addPeripheral, deletePeripheral, findPeripheral, getUWESenseService} from "../util";
-import {SensorReading, UWEPeripheral, UWEService} from "../interfaces";
+import {SensorReading, UWECharacteristic, UWEPeripheral, UWEService} from "../interfaces";
+const platformModule = require("tns-core-modules/platform");
 
 @Component({
     selector: "ns-items",
@@ -231,6 +233,13 @@ export class ConnectComponent implements OnInit {
     }
 
     public onDisconnected(peripheral: UWEPeripheral): void {
+        // Clear all running tasks for this peripheral, if any exist.
+        if (peripheral.tasks) {
+            peripheral.tasks.forEach(taskId => {
+                clearInterval(taskId);
+            });
+        }
+
         peripheral.connecting = false;
         this.connectingIds.delete(peripheral.UUID);
 
@@ -249,21 +258,62 @@ export class ConnectComponent implements OnInit {
         const service: UWEService = getUWESenseService(peripheral);
 
         for (let i = 0; i < service.characteristics.length; i++) {
-            const characteristicId: string = service.characteristics[i].UUID;
+            const characteristic: UWECharacteristic = service.characteristics[i];
+            const characteristicId: string = characteristic.UUID.toLowerCase();
             const typeId: string = NOTIFY_CHARACTERISTICS[characteristicId];
 
             if (!typeId) {
                 continue;
             }
 
-            startNotifying({
-                peripheralUUID: peripheral.UUID,
-                serviceUUID: service.UUID,
-                characteristicUUID: characteristicId,
-                onNotify: (result: ReadResult) => this.onNotify(peripheral, typeId, result)
-            }).then(() => {
-                console.log("Notifications subscribed");
-            });
+            // iOS seems to automatically disconnect from devices when
+            // subscribing to notifications. So here we're polling for data
+            // updates instead. Other platforms should stick with the more power
+            // efficient notifications.
+            if (platformModule.isIOS) {
+                // Calculate the duration to resample the characteristic in milliseconds.
+                const resample = characteristic.resample;
+                const resampleMillis = ((resample.hours * 60 * 60) + (resample.minutes * 60) + resample.seconds) * 1000;
+
+                // Define reading state, prevents multiple reads at the same time.
+                let reading = false;
+
+                // Create the device poll task, manually requesting data once
+                // every user-configured epoch.
+                const taskId = setInterval(() => {
+                    // Do nothing if already reading from characteristic.
+                    if (reading) return;
+
+                    // Begin reading from the characteristic.
+                    reading = true;
+                    read({
+                        peripheralUUID: peripheral.UUID,
+                        serviceUUID: service.UUID,
+                        characteristicUUID: characteristicId
+                    }).then(result => {
+                        // Fully read in the result, and send to DataUnity.
+                        this.onNotify(peripheral, typeId, result);
+                        reading = false; // We're finished reading.
+                    });
+                }, resampleMillis);
+
+                // Assign task to the peripheral, in the event we wish to cancel
+                // this task later.
+                if (!peripheral.tasks) {
+                    peripheral.tasks = [taskId];
+                } else {
+                    peripheral.tasks.push(taskId);
+                }
+            } else {
+                startNotifying({
+                    peripheralUUID: peripheral.UUID,
+                    serviceUUID: service.UUID,
+                    characteristicUUID: characteristicId,
+                    onNotify: (result: ReadResult) => this.onNotify(peripheral, typeId, result)
+                }).then(() => {
+                    console.log("Notifications subscribed");
+                });
+            }
         }
     }
 
