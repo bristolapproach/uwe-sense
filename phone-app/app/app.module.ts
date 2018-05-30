@@ -13,6 +13,7 @@ import {SessionComponent} from "./component/session.component";
 import {NoteComponent} from "./component/note.component";
 import {DataUnityComponent} from "./component/dataunity.component";
 import {JournalComponent} from "./component/journal.component";
+import {LicenseComponent} from "./component/license.component";
 
 @NgModule({
     bootstrap: [
@@ -26,6 +27,7 @@ import {JournalComponent} from "./component/journal.component";
     ],
     declarations: [
         AppComponent,
+        LicenseComponent,
         LoginComponent,
         SessionComponent,
         AboutComponent,
@@ -37,7 +39,6 @@ import {JournalComponent} from "./component/journal.component";
     ],
     providers: [
         ApiService
-
     ],
     schemas: [
         NO_ERRORS_SCHEMA

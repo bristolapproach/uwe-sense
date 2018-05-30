@@ -1,0 +1,11 @@
+<ActionBar title="Bristol Approach" class="action-bar"></ActionBar>
+<ScrollView>
+    <StackLayout class="page" orientation="vertical">
+        <Image src="res://logo" width="75%" horizontalAlignment="center"></Image>
+        <Label text="Bristol Sense" class="title"></Label>
+        <Label text="License Agreement" class="subtitle"></Label>
+        <TextView borderWidth="1" height="500px" text="{{license}}" editable="false"></TextView>
+        <Button text="Accept" (tap)="acceptLicense($event)"></Button>
+        <Button class="special" text="Deny" (tap)="denyLicense($event)"></Button>
+    </StackLayout>
+</ScrollView>

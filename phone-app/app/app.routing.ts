@@ -10,9 +10,11 @@ import {SessionComponent} from "./component/session.component";
 import {NoteComponent} from "./component/note.component";
 import {DataUnityComponent} from "./component/dataunity.component";
 import {JournalComponent} from "./component/journal.component";
+import {LicenseComponent} from "./component/license.component";
 
 export const routes: Routes = [
-    {path: "", redirectTo: "/login", pathMatch: "full"},
+    {path: "", redirectTo: "/license", pathMatch: "full"},
+    {path: "license", component: LicenseComponent},
     {path: "login", component: LoginComponent},
     {path: "session", component: SessionComponent},
     {path: "about", component: AboutComponent},
