@@ -122,7 +122,8 @@ export class ConnectComponent implements OnInit {
             return startScanning({
                 serviceUUIDs: [SENSOR_SERVICE_ID],
                 seconds: SCAN_DURATION_SECONDS,
-                onDiscovered: (peripheral: UWEPeripheral) => this.onDiscovered(peripheral)
+                onDiscovered: (peripheral: UWEPeripheral) => this.onDiscovered(peripheral),
+                skipPermissionCheck: false
             });
         }).then(() => {
             this.scanning = false;
