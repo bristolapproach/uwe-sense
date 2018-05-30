@@ -1,10 +1,8 @@
 import {Injectable} from "@angular/core";
 import "rxjs/add/operator/map";
 import {enableLocationRequest, getCurrentLocation, isEnabled} from "nativescript-geolocation";
-import {CreateDevice, LocationData, Note, SensorReading, UnregisterDevice, UWEPeripheral} from "./interfaces";
-import * as https from "nativescript-https";
-const nsHttp = require("http");
-const platformModule = require("tns-core-modules/platform");
+import {CreateDevice, LocationData, Note, SensorReading, UnregisterDevice} from "./interfaces";
+const http = require("http");
 
 @Injectable()
 export class ApiService {
@@ -19,14 +17,8 @@ export class ApiService {
     private token: string = "";
     private locationEnabled: boolean = false;
     private session: Date;
-    private httpModule = nsHttp;
 
     constructor() {
-      if (platformModule.isAndroid) {
-          this.httpModule = https;
-      } else {
-          this.httpModule = nsHttp;
-      }
     }
 
     public isLocationEnabled(): boolean {
@@ -50,7 +42,7 @@ export class ApiService {
 
         this.token = token;
 
-        return this.httpModule.request({
+        return http.request({
             method: "POST",
             url: this.authenticateUrl,
             content: token,
@@ -75,7 +67,7 @@ export class ApiService {
 
         console.log("Sending create device: " + JSON.stringify(data));
 
-        return this.httpModule.request({
+        return http.request({
             method: "POST",
             url: this.createDeviceUrl,
             headers: headers,
@@ -106,7 +98,7 @@ export class ApiService {
 
         return this.addLocation(data).then(() => {
             console.log("Sending sensor reading: " + JSON.stringify(data));
-            return this.httpModule.request({
+            return http.request({
                 method: "POST",
                 url: this.dataPublishingUrl,
                 headers: headers,
@@ -138,7 +130,7 @@ export class ApiService {
 
         return this.addLocation(data).then(() => {
             console.log("Sending note: " + JSON.stringify(data));
-            return this.httpModule.request({
+            return http.request({
                 method: "POST",
                 url: this.dataPublishingUrl,
                 headers: headers,
@@ -188,7 +180,7 @@ export class ApiService {
 
         console.log("Sending unregister device: " + JSON.stringify(data));
 
-        return this.httpModule.request({
+        return http.request({
             method: "POST",
             url: this.unregisterDeviceUrl,
             headers: headers,
