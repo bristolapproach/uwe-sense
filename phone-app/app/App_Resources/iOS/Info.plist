@@ -50,7 +50,7 @@
 	        <string>Editor</string>
 	        <key>CFBundleURLSchemes</key>
 	        <array>
-	            <string>org.uwe.sense</string>
+	            <string>uk.org.kwmc.sense</string>
 	        </array>
 	    </dict>
 	    <dict>
