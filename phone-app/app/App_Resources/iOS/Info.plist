@@ -61,14 +61,6 @@
 	            <string>com.googleusercontent.apps.874487374755-opgqgtsfefa255pvabalklc30oqk6a1k</string>
 	        </array>
 	    </dict>
-	    <dict>
-	        <key>CFBundleTypeRole</key>
-	        <string>Editor</string>
-	        <key>CFBundleURLSchemes</key>
-	        <array>
-	            <string>bla bla bla</string>
-	        </array>
-	    </dict>
 	</array>
 </dict>
 </plist>

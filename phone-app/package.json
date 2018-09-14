@@ -4,7 +4,7 @@
   "readme": "UWE Sense",
   "repository": "https://github.com/bristolapproach/uwe-sense",
   "nativescript": {
-    "id": "org.uwe.sense",
+    "id": "uk.org.kwmc.sense",
     "tns-ios": {
       "version": "4.0.1"
     },
