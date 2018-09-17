@@ -16,5 +16,5 @@ export const DEFAULT_RESAMPLE_RATE = {
 
 export function configFolder() {
     const platformModule = require("tns-core-modules/platform");
-    return platformModule.isIOS ? fs.knownFolders.ios.sharedPublic() : fs.knownFolders.currentApp();
+    return platformModule.isIOS ? fs.knownFolders.documents() : fs.knownFolders.currentApp();
 }
