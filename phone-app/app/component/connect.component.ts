@@ -15,6 +15,7 @@ import {RouterExtensions} from "nativescript-angular";
 import {File} from "tns-core-modules/file-system";
 import {ApiService} from "../app.service";
 import {
+    configFolder,
     DEFAULT_RESAMPLE_RATE,
     NOTIFY_CHARACTERISTICS,
     SCAN_DURATION_SECONDS,
@@ -22,7 +23,6 @@ import {
 } from "../configuration";
 import {addPeripheral, deletePeripheral, findPeripheral, getUWESenseService} from "../util";
 import {SensorReading, UWECharacteristic, UWEPeripheral, UWEService} from "../interfaces";
-import * as fs from "tns-core-modules/file-system";
 
 const platformModule = require("tns-core-modules/platform");
 
@@ -48,8 +48,7 @@ export class ConnectComponent implements OnInit {
     }
 
     public ngOnInit(): void {
-        const folder = platformModule.isIOS ? fs.knownFolders.ios.sharedPublic() : fs.knownFolders.currentApp();
-        this.knownPeripheralsFile = folder.getFile("known-peripherals.json");
+        this.knownPeripheralsFile = configFolder().getFile("known-peripherals.json");
         this.knownPeripheralsFile.readText().then(content => {
             if (!content) {
                 return;

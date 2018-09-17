@@ -5,6 +5,7 @@ import {RouterExtensions} from "nativescript-angular";
 import {exit} from "nativescript-exit";
 import {license} from "../license";
 import * as fs from "tns-core-modules/file-system";
+import {configFolder} from "../configuration";
 
 const platformModule = require("tns-core-modules/platform");
 
@@ -22,8 +23,7 @@ export class LicenseComponent implements OnInit {
     }
 
     public ngOnInit(): void {
-        const folder = platformModule.isIOS ? fs.knownFolders.ios.sharedPublic() : fs.knownFolders.currentApp();
-        const path = fs.path.join(folder.path, ".eula");
+        const path = fs.path.join(configFolder().path, ".eula");
 
         // Do nothing if eula already agreed to, or we're not running iOS. Users
         // on other platforms will still need to agree to the EULA with a popup
@@ -37,8 +37,7 @@ export class LicenseComponent implements OnInit {
 
     public acceptLicense(): void {
         // Create the eula file.
-        const folder = platformModule.isIOS ? fs.knownFolders.ios.sharedPublic() : fs.knownFolders.currentApp();
-        folder.getFile(".eula");
+        configFolder().getFile(".eula");
         this.goLogin();
     }
 

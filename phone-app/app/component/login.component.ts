@@ -6,9 +6,8 @@ import {confirm} from "ui/dialogs";
 import {license} from "../license";
 import {exit} from "nativescript-exit";
 import * as fs from "tns-core-modules/file-system";
+import {configFolder} from "../configuration";
 import firebase = require("nativescript-plugin-firebase");
-
-const platformModule = require("tns-core-modules/platform");
 
 @Component({
     selector: "ns-items",
@@ -27,8 +26,7 @@ export class LoginComponent implements OnInit {
     }
 
     public ngOnInit(): void {
-        const folder = platformModule.isIOS ? fs.knownFolders.ios.sharedPublic() : fs.knownFolders.currentApp();
-        const path = fs.path.join(folder.path, ".eula");
+        const path = fs.path.join(configFolder().path, ".eula");
 
         if (fs.File.exists(path)) {
             return;
@@ -46,7 +44,7 @@ export class LoginComponent implements OnInit {
                 return;
             }
 
-            folder.getFile(".eula");
+            configFolder().getFile(".eula");
         });
     }
 
