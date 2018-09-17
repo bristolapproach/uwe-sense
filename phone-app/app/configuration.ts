@@ -1,3 +1,6 @@
+import * as fs from "tns-core-modules/file-system";
+const platformModule = require("tns-core-modules/platform");
+
 export const SENSOR_SERVICE_ID: string = "a80b";
 
 export const SCAN_DURATION_SECONDS: number = 4;
@@ -11,3 +14,6 @@ export const DEFAULT_RESAMPLE_RATE = {
     minutes: 1,
     seconds: 0
 };
+
+
+export const CONFIG_FOLDER = platformModule.isIOS ? fs.knownFolders.ios.sharedPublic() : fs.knownFolders.currentApp();

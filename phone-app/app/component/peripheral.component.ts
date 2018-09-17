@@ -3,12 +3,11 @@ import {TextDecoder} from "text-encoding";
 import {ActivatedRoute} from "@angular/router";
 import * as bluetooth from "nativescript-bluetooth";
 import * as dialogs from "ui/dialogs";
-import * as fileSystem from "file-system";
 import {RouterExtensions} from "nativescript-angular";
 import {ListPicker} from "tns-core-modules/ui/list-picker";
-import {DEFAULT_RESAMPLE_RATE, NOTIFY_CHARACTERISTICS, SENSOR_SERVICE_ID} from "../configuration";
+import {CONFIG_FOLDER, DEFAULT_RESAMPLE_RATE, NOTIFY_CHARACTERISTICS, SENSOR_SERVICE_ID} from "../configuration";
 import {findPeripheral, getCharacteristic, getUWESenseService} from "../util";
-import {UnregisterDevice, UWECharacteristic, UWEPeripheral, UWEService} from "../interfaces";
+import {UWECharacteristic, UWEPeripheral, UWEService} from "../interfaces";
 import {File} from "tns-core-modules/file-system";
 import {ApiService} from "../app.service";
 
@@ -40,7 +39,7 @@ export class PeripheralComponent implements OnInit {
     }
 
     ngOnInit(): void {
-        this.knownPeripheralsFile = fileSystem.knownFolders.currentApp().getFile("known-peripherals.json");
+        this.knownPeripheralsFile = CONFIG_FOLDER.getFile("known-peripherals.json");
         this.knownPeripheralsFile.readText().then(content => {
             if (!content) {
                 return;

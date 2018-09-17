@@ -3,18 +3,19 @@ import {
     connect,
     disconnect,
     hasCoarseLocationPermission,
+    read,
     ReadResult,
     requestCoarseLocationPermission,
     startNotifying,
     startScanning,
-    write,
-    read
+    write
 } from "nativescript-bluetooth";
 import {TextDecoder} from "text-encoding";
 import {RouterExtensions} from "nativescript-angular";
-import {File, knownFolders} from "tns-core-modules/file-system";
+import {File} from "tns-core-modules/file-system";
 import {ApiService} from "../app.service";
 import {
+    CONFIG_FOLDER,
     DEFAULT_RESAMPLE_RATE,
     NOTIFY_CHARACTERISTICS,
     SCAN_DURATION_SECONDS,
@@ -22,6 +23,7 @@ import {
 } from "../configuration";
 import {addPeripheral, deletePeripheral, findPeripheral, getUWESenseService} from "../util";
 import {SensorReading, UWECharacteristic, UWEPeripheral, UWEService} from "../interfaces";
+
 const platformModule = require("tns-core-modules/platform");
 
 @Component({
@@ -46,7 +48,7 @@ export class ConnectComponent implements OnInit {
     }
 
     public ngOnInit(): void {
-        this.knownPeripheralsFile = knownFolders.currentApp().getFile("known-peripherals.json");
+        this.knownPeripheralsFile = CONFIG_FOLDER.getFile("known-peripherals.json");
         this.knownPeripheralsFile.readText().then(content => {
             if (!content) {
                 return;
