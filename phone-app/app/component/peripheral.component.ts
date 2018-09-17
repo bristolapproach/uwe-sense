@@ -5,11 +5,14 @@ import * as bluetooth from "nativescript-bluetooth";
 import * as dialogs from "ui/dialogs";
 import {RouterExtensions} from "nativescript-angular";
 import {ListPicker} from "tns-core-modules/ui/list-picker";
-import {CONFIG_FOLDER, DEFAULT_RESAMPLE_RATE, NOTIFY_CHARACTERISTICS, SENSOR_SERVICE_ID} from "../configuration";
+import {DEFAULT_RESAMPLE_RATE, NOTIFY_CHARACTERISTICS, SENSOR_SERVICE_ID} from "../configuration";
 import {findPeripheral, getCharacteristic, getUWESenseService} from "../util";
 import {UWECharacteristic, UWEPeripheral, UWEService} from "../interfaces";
 import {File} from "tns-core-modules/file-system";
 import {ApiService} from "../app.service";
+import * as fs from "tns-core-modules/file-system";
+
+const platformModule = require("tns-core-modules/platform");
 
 @Component({
     selector: "ns-items",
@@ -39,7 +42,8 @@ export class PeripheralComponent implements OnInit {
     }
 
     ngOnInit(): void {
-        this.knownPeripheralsFile = CONFIG_FOLDER.getFile("known-peripherals.json");
+        const folder = platformModule.isIOS ? fs.knownFolders.ios.sharedPublic() : fs.knownFolders.currentApp();
+        this.knownPeripheralsFile = folder.getFile("known-peripherals.json");
         this.knownPeripheralsFile.readText().then(content => {
             if (!content) {
                 return;
