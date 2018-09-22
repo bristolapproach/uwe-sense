@@ -41,6 +41,7 @@ export class ConnectComponent implements OnInit {
     private connectingIds: Set<string> = new Set();
     private knownPeripheralsFile: File;
     private devicesFound: number = 0;
+    private displayDisconnect: boolean = true;
 
     constructor(private zone: NgZone,
                 private routerExtensions: RouterExtensions,
@@ -48,6 +49,7 @@ export class ConnectComponent implements OnInit {
     }
 
     public ngOnInit(): void {
+        this.displayDisconnect = true;
         this.knownPeripheralsFile = configFolder().getFile("known-peripherals.json");
         this.knownPeripheralsFile.readText().then(content => {
             if (!content) {
@@ -73,6 +75,7 @@ export class ConnectComponent implements OnInit {
     }
 
     public quitSession(): void {
+        this.displayDisconnect = false;
         for (let i = 0; i < this.connectedPeripherals.length; i++) {
             const peripheral = this.connectedPeripherals[i];
             disconnect({UUID: peripheral.UUID});
@@ -248,7 +251,7 @@ export class ConnectComponent implements OnInit {
 
         let wasConnected: boolean = deletePeripheral(this.connectedPeripherals, peripheral.UUID);
 
-        if (wasConnected) {
+        if (wasConnected && this.displayDisconnect) {
             addPeripheral(this.disconnectedKnownPeripherals, peripheral);
             alert("Disconnected from " + peripheral.name);
         }
