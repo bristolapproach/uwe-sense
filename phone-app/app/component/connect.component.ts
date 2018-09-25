@@ -278,8 +278,13 @@ export class ConnectComponent implements OnInit {
             // efficient notifications.
             if (platformModule.isIOS) {
                 // Calculate the duration to resample the characteristic in milliseconds.
-                const resample = characteristic.resample;
-                const resampleMillis = ((resample.hours * 60 * 60) + (resample.minutes * 60) + resample.seconds) * 1000;
+                let resampleMillis;
+                try {
+                  const resample = characteristic.resample;
+                  resampleMillis = ((resample.hours * 60 * 60) + (resample.minutes * 60) + resample.seconds) * 1000;
+                } catch (e) {
+                  resampleMillis = 60 * 1000;
+                }
 
                 // Define reading state, prevents multiple reads at the same time.
                 let reading = false;
