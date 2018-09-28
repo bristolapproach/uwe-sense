@@ -331,12 +331,15 @@ export class ConnectComponent implements OnInit {
     public onNotify(peripheral: UWEPeripheral, typeId: string, result: ReadResult): void {
         const length = new Uint8Array(result.value)[2];
         const payload = new Uint8ClampedArray(result.value, 3, length);
-        let value: number = 0;
+        var value: number = 0;
 
         for (let i = 0; i < length; i++) {
             value <<= 8;
             value += payload[i];
         }
+
+        // Convert PPB to ug/m^3
+        value = 0.0409 * value * 46.01;
 
         console.log("Received data for " + typeId + " : " + value);
 
