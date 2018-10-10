@@ -10,8 +10,8 @@ export const NOTIFY_CHARACTERISTICS = {
 
 export const DEFAULT_RESAMPLE_RATE = {
     hours: 0,
-    minutes: 1,
-    seconds: 0
+    minutes: 0,
+    seconds: 15
 };
 
 export function configFolder() {
