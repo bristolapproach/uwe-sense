@@ -329,7 +329,7 @@ export class ConnectComponent implements OnInit {
         }
 
         // Convert PPB to ug/m^3
-        value = 0.0409 * value * 46.01;
+        value = (0.0409 * value * 46.01) / 1000.0;
 
         console.log("Received data for " + typeId + " : " + value);
 
